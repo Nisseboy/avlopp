@@ -76,13 +76,18 @@ class SceneGame extends Scene {
     player.speedMult = getKeyPressed("Run") ? 2.5 : 1
 
     for (let o of this.world.objects) {
-      if (o.objectType == "ObjectWater" && o.inBounds(player.pos)) {
-        player.stepCooldown = 0;
-        player.speedMult = 0.001;
+      if (o.objectType == "ObjectWater" && o.inBounds(player.pos) && player.movement.sqMag() != 0) {
+        player.stepCooldown = 0.1;
+        
+        let movementDir = Math.atan2(player.movement.y, player.movement.x);
+        player.dir += (movementDir - player.dir) * dt * 5;
+        
+        player.pos.addV(new Vec(Math.cos(player.dir), Math.sin(player.dir))._mul(player.speedMult * 2 * dt));
+        
       }
     }
 
-    this.cam.pos.addV(this.player.pos._subV(this.cam.pos).div(30));
+    this.cam.pos.addV(this.player.pos._subV(this.cam.pos).mul(dt * 3));
 
     for (let i = 0; i < this.world.entities.length; i++) {
       let e = this.world.entities[i];

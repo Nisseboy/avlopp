@@ -1,6 +1,7 @@
 let scenes = {
   editor: new SceneEditor(),
   objectPicker: new SceneObjectPicker(),
+  texturePicker: new SceneTexturePicker(),
   game: new SceneGame(), 
   mainMenu: new SceneMainMenu(),
   lobbyPicker: new SceneLobbyPicker(),
@@ -68,7 +69,7 @@ function afterSetup() {
       id = data.id;
       scenes.game.loadWorld(data.world);
       scenes.editor.loadWorld(data.world);
-      setScene(scenes.mainMenu);
+      setScene(scenes.editor);
     });
   }
 }

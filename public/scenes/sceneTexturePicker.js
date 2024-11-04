@@ -1,9 +1,11 @@
-class SceneObjectPicker extends Scene {
+class SceneTexturePicker extends Scene {
   constructor() {
     super();
 
     this.cam = new Camera(new Vec(800, 450));
     this.cam.w = 1600;
+
+    this.callback = (newTex) => {};
   }
 
   start() {
@@ -16,37 +18,23 @@ class SceneObjectPicker extends Scene {
     };
     this.buttons = [];
 
-
+    let x = 50;
     let y = 50;
-    for (let ot in objectTypes) {
-      let x = 49;
 
-      if (ot != "ObjectBase")this.buttons.push(new ButtonText(new Vec(x, y), ot, buttonStyle, e => {}));
-      y += 40;
-
-      for (let i = 0; i < objectPrefabs.length; i++) {
-        let o = objectPrefabs[i];
-        if (o.objectType != ot) continue;
-
-        let texture = o.texture ? tex[o.texture] : new Img(new Vec(10, 10));
-
-        this.buttons.push(new ButtonImage(new Vec(x, y), new Vec(100, 100), texture, buttonStyle, e => {
-          let ob = (new objectTypes[o.objectType]()).from(o);
-          ob.pos = scenes.editor.cam.pos.copy();
-
-          scenes.editor.world.objects.push(ob);
-          setScene(scenes.editor);
-        }));
-        
-        x += 130;
-        if (x > this.cam.w - 200) {
-          x = 50;
-          y += 180;
-        }
+    for (let texture in tex) {
+      this.buttons.push(new ButtonImage(new Vec(x, y), new Vec(100, 100), tex[texture], buttonStyle, e => {
+        this.callback(texture);
+        setScene(scenes.editor);
+      }));
+      
+      x += 130;
+      if (x > this.cam.w - 200) {
+        x = 50;
+        y += 130;
       }
-
-      if (x != 49) y += 130 + 40;
     }
+
+    if (x != 49) y += 130 + 40;
   }
 
   keydown(e) {
