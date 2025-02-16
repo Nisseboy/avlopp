@@ -4,9 +4,11 @@ class SceneEditor extends Scene {
 
     this.cam = new Camera(new Vec(0, 0));
     this.cam.w = 16;
+    this.cam.renderW = nde.w;
 
     this.uicam = new Camera(new Vec(800, 450));
     this.uicam.w = 1600;
+    this.uicam.renderW = nde.w;
 
     this.hoveredObject = undefined;
     this.selectedObjects = [];
@@ -27,26 +29,26 @@ class SceneEditor extends Scene {
       hover: {text: {fill: [255, 0, 0]}}
     };
     this.buttons = [
-      new ButtonText(new Vec(25, 25), "Exit", this.buttonStyle, function () {
+      new ButtonText(new Vec(25, 25), "Exit", this.buttonStyle, {mousedown: [function () {
         transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
-      }),
-      new ButtonText(new Vec(25, 75), "Export", this.buttonStyle, () => {
+      }]}),
+      new ButtonText(new Vec(25, 75), "Export", this.buttonStyle, {mousedown: [() => {
         console.log(`'${JSON.stringify(this.world)}'`);
-      }),
+      }]}),
     ];
   }
 
   keydown(e) {
     let objects = this.world.objects;
 
-    if (getKeyEqual(e.key,"Pause")) {
-      transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
+    if (nde.getKeyEqual(e.key,"Pause")) {
+      nde.transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
     }
-    if (getKeyEqual(e.key,"Object Picker")) {
-      setScene(scenes.objectPicker);
+    if (nde.getKeyEqual(e.key,"Object Picker")) {
+      nde.setScene(scenes.objectPicker);
     }
 
-    if (getKeyEqual(e.key, "Delete")) {
+    if (nde.getKeyEqual(e.key, "Delete")) {
       for (let o of this.selectedObjects) {
         objects.splice(objects.indexOf(o), 1);
       }
@@ -58,22 +60,22 @@ class SceneEditor extends Scene {
     let objects = this.world.objects;
 
     cam.pos.addV(new Vec(
-      getKeyPressed("Move Right") - getKeyPressed("Move Left"),
-      getKeyPressed("Move Down") - getKeyPressed("Move Up"),
-    ).mul(dt / 16 * cam.w * 10 * (getKeyPressed("Run") ? 2.5 : 1)));
+      nde.getKeyPressed("Move Right") - nde.getKeyPressed("Move Left"),
+      nde.getKeyPressed("Move Down") - nde.getKeyPressed("Move Up"),
+    ).mul(dt / 16 * cam.w * 10 * (nde.getKeyPressed("Run") ? 2.5 : 1)));
 
     this.hoveredObject = undefined;
     for (let o of objects) {
-      if (o.inBounds(cam.from(mouse))) this.hoveredObject = o;
+      if (o.inBounds(cam.from(nde.mouse))) this.hoveredObject = o;
     }
 
-    if (getKeyPressed("mouse0")) {
+    if (nde.getKeyPressed("mouse0")) {
       for (let i = 0; i < this.selectedObjects.length; i++) {
         let o = this.selectedObjects[i];
+        
+        o.pos = cam.from(nde.mouse)._addV(this.selectedObjectsOffsets[i]);
 
-        o.pos = cam.from(mouse)._addV(this.selectedObjectsOffsets[i]);
-
-        if (getKeyPressed("Ctrl")) {
+        if (nde.getKeyPressed("Ctrl")) {
           o.pos.mul(5).floor().div(5);
         }
       }
@@ -89,7 +91,7 @@ class SceneEditor extends Scene {
     let cam = this.cam;
     let objects = this.world.objects;
 
-    let ctrlPressed = getKeyPressed("Ctrl");
+    let ctrlPressed = nde.getKeyPressed("Ctrl");
     let selected = this.selectedObjects.includes(this.hoveredObject);
     
 
@@ -111,7 +113,7 @@ class SceneEditor extends Scene {
       
 
       for (let i = 0; i < this.selectedObjects.length; i++) {
-        this.selectedObjectsOffsets[i] = this.selectedObjects[i].pos._subV(cam.from(mouse));
+        this.selectedObjectsOffsets[i] = this.selectedObjects[i].pos._subV(cam.from(nde.mouse));
       }
     }
 
@@ -122,11 +124,13 @@ class SceneEditor extends Scene {
 
   render() {
     let cam = this.cam;
+    this.cam.renderW = nde.w;
+    this.uicam.renderW = nde.w;
 
     renderer.save();
 
     renderer.set("fill", [100, 100, 50]);
-    renderer.rect(new Vec(0, 0), new Vec(w, w / 16 * 9));
+    renderer.rect(new Vec(0, 0), new Vec(nde.w, nde.w / 16 * 9));
 
     renderer.restore();
 
@@ -176,7 +180,7 @@ class SceneEditor extends Scene {
     renderer.save();
     renderer.set("fill", [200, 100, 100]);
     
-    renderer.image(tex[entityTypes.player.texture], entityTypes.player.size._mul(-0.5), entityTypes.player.size);
+    renderer.image(tex["duck/1"], new Vec(-0.5, -0.5), new Vec(1, 1));
     renderer.restore();
 
     renderer.restore();
@@ -194,7 +198,7 @@ class SceneEditor extends Scene {
       renderer.rect(new Vec(0, 0), new Vec(w, this.uicam.w / 16 * 9));
 
 
-      let props = ["objectType", "size", "text", "texture", ];
+      let props = ["type", "size", "text", "texture", ];
 
       for (let o of this.selectedObjects) {
         for (let i = 0; i < props.length; i++) {
@@ -214,33 +218,33 @@ class SceneEditor extends Scene {
         renderer.text(prop, new Vec(25, 25 + this.buttonStyle.padding));
 
         switch(prop) {
-          case "objectType":
-            renderer.text(this.selectedObjects[0].objectType, new Vec(w / 3, 25 + this.buttonStyle.padding));
+          case "type":
+            renderer.text(this.selectedObjects[0].type, new Vec(w / 3, 25 + this.buttonStyle.padding));
             break;
 
           case "size":
-            new ButtonText(new Vec(w / 3, 25), "Edit", this.buttonStyle, () => {
+            new ButtonText(new Vec(w / 3, 25), "Edit", this.buttonStyle, {mousedown: [() => {
               let text = prompt("New size", this.selectedObjects[0].size.x + "," + this.selectedObjects[0].size.y);
               if (text == null || text == "") return;
               let axes = text.split(",").map(parseFloat);
               
               for (let o of this.selectedObjects) o.size = new Vec(axes[0], axes[1]);
-            }).render();
+            }]}).render();
             break;
 
           case "text":
-            new ButtonText(new Vec(w / 3, 25), "Edit", this.buttonStyle, () => {
+            new ButtonText(new Vec(w / 3, 25), "Edit", this.buttonStyle, {mousedown: [() => {
               let text = prompt("New text", this.selectedObjects[0].text);
               if (text == null || text == "") return;
               for (let o of this.selectedObjects) o.text = text;
-            }).render();
+            }]}).render();
             break;
             
           case "texture":
-            new ButtonText(new Vec(w / 3, 25), "Edit", this.buttonStyle, () => {
-              setScene(scenes.texturePicker);
+            new ButtonText(new Vec(w / 3, 25), "Edit", this.buttonStyle, {mousedown: [() => {
+              nde.setScene(scenes.texturePicker);
               scenes.texturePicker.callback = (newTex) => {for (let o of this.selectedObjects) o.texture = newTex;};
-            }).render();
+            }]}).render();
             break;
         }
 

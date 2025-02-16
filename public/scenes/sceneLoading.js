@@ -4,6 +4,7 @@ class SceneLoading extends Scene {
 
     this.cam = new Camera(new Vec(0, 0));
     this.cam.w = 1600;
+    this.cam.renderW = nde.w;
   }
 
   start() {
@@ -20,7 +21,7 @@ class SceneLoading extends Scene {
     renderer.save();
 
     renderer.set("fill", [100, 100, 50]);
-    renderer.rect(new Vec(0, 0), new Vec(w, w / 16 * 9));
+    renderer.rect(new Vec(0, 0), new Vec(nde.w, nde.w / 16 * 9));
 
     cam.applyTransform();
 

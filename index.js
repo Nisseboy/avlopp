@@ -3,8 +3,7 @@ const app = express();
 const server = require("http").createServer(app);
 const io = require("socket.io")(server, { cors: { origin: "*" }});
 
-const PORT = 8080;
-const updateInterval = 100;
+
 
 
 class Vec {
@@ -12,10 +11,14 @@ class Vec {
 }
 global.Vec = Vec;
 
-let Entity = require("./public/entity").Entity;
-global.Entity = Entity;
 
-let World = require("./public/world").World;
+require("./public/constants");
+
+require("./public/entities/EntityBase");
+require("./public/entities/EntityPlayer");
+
+require("./public/world");
+
 
 let lobbies = {}
 
@@ -25,8 +28,9 @@ app.get("/*", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
 });
 
-server.listen(process.env.PORT || PORT, () =>{
-    console.log("http://127.0.0.1:" + PORT + "/");
+let p = process.env.PORT || constants.port;
+server.listen(p, () =>{
+    console.log("http://127.0.0.1:" + p + "/");
 });
 
 
@@ -42,7 +46,7 @@ io.on("connection", (socket) => {
       lobby = createLobby(data.lobby);
     }
 
-    player = new Entity(new Vec(0, 0), "player");
+    player = new EntityPlayer(new Vec(0, 0), "EntityPlayer");
     lobby.world.entities.push(player);
 
     socket.emit("join", {
@@ -68,10 +72,13 @@ io.on("connection", (socket) => {
     console.log(`${lobby.lobbyId}: ${player.id} Disconnected`);
   });
 
-  socket.on('update', data => {
+  socket.on('event', data => {
     if (!lobby || !player) return;
 
     switch(data.action) {
+      case "move":
+        lobby.world.entities.find(elem=>elem.id == data.id).pos = data.pos;
+        break;
       case "vec":
         lobby.world.entities.find(elem=>elem.id == data.id)[data.path] = data.vec;
         break;
@@ -104,9 +111,10 @@ function createLobby(lobbyId) {
   };
 
   let interval = setInterval(() => {
-    if (lobby.sockets.length == 0) {
+    if (Object.keys(lobby.sockets).length == 0) {
       clearInterval(interval);
       delete lobbies[lobbyId];
+      console.log(`${lobbyId}: Lobby deleted`);
     }
 
     for (let id in lobby.sockets) {
@@ -115,12 +123,14 @@ function createLobby(lobbyId) {
 
       if (e == undefined) continue;
 
-      s.emit("update", {id: id, events: e});
+      s.emit("update", {events: e});
 
       e.length = 0;
     }
-  }, updateInterval);
+  }, constants.updateInterval);
 
   lobbies[lobbyId] = lobby;
+
+  console.log(`${lobbyId}: Lobby created`);
   return lobby;
 }

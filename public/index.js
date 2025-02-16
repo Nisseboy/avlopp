@@ -1,30 +1,24 @@
-let scenes = {
-  editor: new SceneEditor(),
-  objectPicker: new SceneObjectPicker(),
-  texturePicker: new SceneTexturePicker(),
-  game: new SceneGame(), 
-  mainMenu: new SceneMainMenu(),
-  lobbyPicker: new SceneLobbyPicker(),
-  loading: new SceneLoading(),
-};
+let nde;
+let scenes;
+let renderer;
 
 let lobby;
 let id;
 let socket;
 
-let updateInterval = 100;
-let updates = [];
+let events = [];
 
-function preload() {
-  renderer = new RendererCanvas();
 
+document.body.onload = e => {
+  nde = new NDE(document.getElementsByTagName("main")[0]);
+  renderer = nde.renderer;
   preloadTextures();
 
-  debug = true;
+  nde.debug = true;
 
-  //targetFPS = 60;
+  //nde.targetFPS = 60;
 
-  controls = {
+  nde.controls = {
     "Move Up": "w",
     "Move Down": "s",
     "Move Left": "a",
@@ -45,64 +39,72 @@ function preload() {
     "Pause": "Escape",
     "Debug Mode": "l",
   };
-}
-document.addEventListener("keydown", e => {
-  if (getKeyEqual(e.key,"Debug Mode")) debug = !debug;
-});
 
-function beforeSetup() {
+  scenes = {
+    editor: new SceneEditor(),
+    objectPicker: new SceneObjectPicker(),
+    texturePicker: new SceneTexturePicker(),
+    game: new SceneGame(), 
+    mainMenu: new SceneMainMenu(),
+    lobbyPicker: new SceneLobbyPicker(),
+    loading: new SceneLoading(),
+  };
 
-}
-function afterSetup() {
-  lobby = document.location.pathname.split("/")[1];
+  nde.registerEvent("keydown", e => {
+    if (nde.getKeyEqual(e.key,"Debug Mode")) nde.debug = !nde.debug;
+  });
+
+  nde.registerEvent("afterSetup", () => {
+    lobby = document.location.pathname.split("/")[1];
   
-  if (lobby == "") {
-    setScene(scenes.lobbyPicker);
-  } else {
-    setScene(scenes.loading);
-    
+    if (lobby == "") {
+      nde.setScene(scenes.lobbyPicker);
+    } else {
+      nde.setScene(scenes.loading);
+      
 
-    socket = io(window.location.origin);
+      socket = io(window.location.origin);
 
-    socket.emit("join", {lobby: lobby});
-    socket.on("join", (data) => {
-      id = data.id;
-      scenes.game.loadWorld(data.world);
-      scenes.editor.loadWorld(data.world);
-      setScene(scenes.editor);
-    });
-  }
+      socket.emit("join", {lobby: lobby});
+      socket.on("join", (data) => {
+        id = data.id;
+        scenes.game.loadWorld(data.world);
+        scenes.editor.loadWorld(data.world);
+        nde.setScene(scenes.mainMenu);
+      });
+    }
+  });
+
+  nde.registerEvent("update", dt => {
+    renderer.set("font", "16px monospace");
+    renderer.set("imageSmoothing", false);
+  });
+
+  nde.registerEvent("resize", e => {
+    //return 432; //new width
+  });
+};
+
+
+
+
+
+function emitEvent(data) {
+  events.push(data);
 }
-
-function beforeUpdate() {
-  renderer.set("font", "16px monospace");
-  renderer.set("imageSmoothing", false);
-}
-function afterUpdate() {
-  
-}
-
-function beforeRender() {
-  
-}
-function afterRender() {
-  
-}
-
-function beforeResize(e) {
-  //return 432; //new width
-  
-  return w;
-}
-function afterResize(e) {
-  
-}
-
-
-
-
 function emit(channel, data) {
   data.id = id;
 
   socket.emit(channel, data);
 }
+
+
+//https://gist.github.com/yomotsu/165ba9ee0dc991cb6db5
+var getDeltaAngle = function () {
+  var TAU = 2 * Math.PI;
+  var mod = function (a, n) { return ( a % n + n ) % n; } // modulo
+  var equivalent = function (a) { return mod(a + Math.PI, TAU) - Math.PI } // [-π, +π]
+  return function (current, target) {
+    return equivalent(target - current);
+  }
+}();

@@ -4,6 +4,7 @@ class SceneObjectPicker extends Scene {
 
     this.cam = new Camera(new Vec(800, 450));
     this.cam.w = 1600;
+    this.cam.renderW = nde.w;
   }
 
   start() {
@@ -17,8 +18,15 @@ class SceneObjectPicker extends Scene {
     this.buttons = [];
 
 
+    let types = [];
+    for (let i in objectPrefabs) {
+      let op = objectPrefabs[i];
+      if (!types.includes(op.type)) types.push(op.type);
+    }
+
+
     let y = 50;
-    for (let ot in objectTypes) {
+    for (let ot of types) {
       let x = 49;
 
       if (ot != "ObjectBase")this.buttons.push(new ButtonText(new Vec(x, y), ot, buttonStyle, e => {}));
@@ -26,17 +34,17 @@ class SceneObjectPicker extends Scene {
 
       for (let i = 0; i < objectPrefabs.length; i++) {
         let o = objectPrefabs[i];
-        if (o.objectType != ot) continue;
+        if (o.type != ot) continue;
 
         let texture = o.texture ? tex[o.texture] : new Img(new Vec(10, 10));
 
-        this.buttons.push(new ButtonImage(new Vec(x, y), new Vec(100, 100), texture, buttonStyle, e => {
-          let ob = (new objectTypes[o.objectType]()).from(o);
+        this.buttons.push(new ButtonImage(new Vec(x, y), new Vec(100, 100), texture, buttonStyle, {mouseup: [e => {
+          let ob = cloneObject(o);
           ob.pos = scenes.editor.cam.pos.copy();
 
           scenes.editor.world.objects.push(ob);
-          setScene(scenes.editor);
-        }));
+          nde.setScene(scenes.editor);
+        }]}));
         
         x += 130;
         if (x > this.cam.w - 200) {
@@ -50,25 +58,26 @@ class SceneObjectPicker extends Scene {
   }
 
   keydown(e) {
-    if (getKeyEqual(e.key,"Pause") || getKeyEqual(e.key,"Object Picker")) {
-      setScene(scenes.editor);
+    if (nde.getKeyEqual(e.key,"Pause") || nde.getKeyEqual(e.key,"Object Picker")) {
+      nde.setScene(scenes.editor);
     }
   }
 
   update(dt) {
     this.cam.pos.addV(new Vec(
-      getKeyPressed("Move Camera Right") - getKeyPressed("Move Camera Left"),
-      getKeyPressed("Move Camera Down") - getKeyPressed("Move Camera Up"),
+      nde.getKeyPressed("Move Camera Right") - nde.getKeyPressed("Move Camera Left"),
+      nde.getKeyPressed("Move Camera Down") - nde.getKeyPressed("Move Camera Up"),
     ).mul(dt * 500));
   }
 
   render() {
     let cam = this.cam;
+    this.cam.renderW = nde.w;
 
     renderer.save();
 
     renderer.set("fill", 19);
-    renderer.rect(new Vec(0, 0), new Vec(w, w / 16 * 9));
+    renderer.rect(new Vec(0, 0), new Vec(nde.w, nde.w / 16 * 9));
     
     renderer.restore();
 

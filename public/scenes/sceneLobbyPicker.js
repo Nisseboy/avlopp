@@ -4,6 +4,7 @@ class SceneLobbyPicker extends Scene {
 
     this.cam = new Camera(new Vec(800, 450));
     this.cam.w = 1600;
+    this.cam.renderW = nde.w;
   }
 
   start() {
@@ -14,14 +15,14 @@ class SceneLobbyPicker extends Scene {
       hover: {text: {fill: [255, 0, 0]}}
     };
     this.buttons = [
-      new ButtonText(new Vec(50, 50), "Create Lobby", buttonStyle, function () {
+      new ButtonText(new Vec(50, 50), "Create Lobby", buttonStyle, {mousedown: [function () {
         document.location.href = Math.floor(Math.random() * 100000);
-      }),
-      new ButtonText(new Vec(50, 150), "Join Lobby", buttonStyle, function () {
+    }]}),
+      new ButtonText(new Vec(50, 150), "Join Lobby", buttonStyle, {mousedown: [function () {
         let lobbyCode = prompt("Lobby code");
 
         document.location.href = lobbyCode;
-      }),
+      }]}),
     ];
   }
 
@@ -35,7 +36,7 @@ class SceneLobbyPicker extends Scene {
     renderer.save();
 
     renderer.set("fill", 19);
-    renderer.rect(new Vec(0, 0), new Vec(w, w / 16 * 9));
+    renderer.rect(new Vec(0, 0), new Vec(nde.w, nde.w / 16 * 9));
     
     renderer.restore();
 

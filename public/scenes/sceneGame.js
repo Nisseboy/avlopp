@@ -4,6 +4,7 @@ class SceneGame extends Scene {
 
     this.cam = new Camera(new Vec(0, 0));
     this.cam.w = 16;
+    this.cam.renderW = nde.w;
 
     this.noiseImg = new Img(new Vec(432, 432 / 16 * 9));
     let imageData = this.noiseImg.ctx.getImageData(0, 0, this.noiseImg.size.x, this.noiseImg.size.y);
@@ -17,22 +18,30 @@ class SceneGame extends Scene {
     }
     this.noiseImg.ctx.putImageData(imageData, 0, 0);
   }
-  loadWorld(world) {
+  loadWorld(world) {    
     this.world = new World().from(world);
 
     this.player = this.world.entities.find(e=>e.id == id);
-    this.lastPlayer = new Entity().from(this.player);
+    this.lastPlayer = cloneEntity(this.player);
 
     socket.on("update", data => {
       for (let e of data.events) {
         switch (e.action) {
           case "connect":
-            this.world.entities.push(new Entity().from(e.player));
+            this.world.entities.push(cloneEntity(e.player, EntityPlayerOther));
             break;
           case "disconnect":
             this.world.entities.splice(this.world.entities.findIndex(elem=>elem.id == e.id), 1);
             break;
 
+          case "move":
+            let entity = this.world.entities.find(elem=>elem.id == e.id);
+            
+            entity.newPos.from(e.pos);
+            entity.diffPos = entity.newPos._subV(entity.pos);
+            entity.moveTime = 0;
+            
+            break;
           case "vec":
             this.world.entities.find(elem=>elem.id == e.id)[e.path].from(e.vec);
             break;
@@ -43,16 +52,27 @@ class SceneGame extends Scene {
       }
     });
 
-    setInterval(e => {
-      if (this.lastPlayer.pos._subV(this.player.pos).mag() > 0.01) {
-        this.lastPlayer.pos.from(this.player.pos);
-        
-        emit("update", {action: "vec", path: "pos", vec: this.player.pos});
-        emit("update", {action: "number", path: "dir", number: this.player.dir});
-        
+    setInterval(() => {
+      let indices = {};
+
+      for (let i = 0; i < events.length; i++) {
+        let e = events[i];
+
+        let name = (e.action + ", " + e.path);
+        indices[name] = i;
       }
+
+      for (let name in indices) {
+        let i = indices[name];
+        let e = events[i];
+
+        emit("event", e);
+      }
+
+      events.length = 0;
+      this.lastPlayer = cloneEntity(this.player);
       
-    }, updateInterval);
+    }, constants.updateInterval);
   }
 
   start() {
@@ -60,8 +80,8 @@ class SceneGame extends Scene {
   }
 
   keydown(e) {
-    if (getKeyEqual(e.key,"Pause")) {
-      transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
+    if (nde.getKeyEqual(e.key,"Pause")) {
+      nde.transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
     }
   }
 
@@ -70,38 +90,41 @@ class SceneGame extends Scene {
     //this.cam.pos = this.car.pos.copy();
     
     player.movement = new Vec(
-      getKeyPressed("Move Right") - getKeyPressed("Move Left"),
-      getKeyPressed("Move Down") - getKeyPressed("Move Up"),
-    );
-    player.speedMult = getKeyPressed("Run") ? 2.5 : 1
+      nde.getKeyPressed("Move Right") - nde.getKeyPressed("Move Left"),
+      nde.getKeyPressed("Move Down") - nde.getKeyPressed("Move Up"),
+    ).normalize();
+    player.speedMult = nde.getKeyPressed("Run") ? 2 : 1
 
     for (let o of this.world.objects) {
-      if (o.objectType == "ObjectWater" && o.inBounds(player.pos) && player.movement.sqMag() != 0) {
-        player.stepCooldown = 0.1;
-        
-        let movementDir = Math.atan2(player.movement.y, player.movement.x);
-        player.dir += (movementDir - player.dir) * dt * 5;
-        
-        player.pos.addV(new Vec(Math.cos(player.dir), Math.sin(player.dir))._mul(player.speedMult * 2 * dt));
-        
+      if (o.type == "ObjectWater" && o.inBounds(player.pos) && player.movement.sqMag() != 0) {
+        player.speedMult *= 0.7;
       }
     }
-
-    this.cam.pos.addV(this.player.pos._subV(this.cam.pos).mul(dt * 3));
 
     for (let i = 0; i < this.world.entities.length; i++) {
       let e = this.world.entities[i];
       e.update(dt);
     }    
+    
+    //this.cam.pos.addV(this.player.pos._subV(this.cam.pos).mul(dt * 3));
+    this.cam.pos.from(this.player.pos);
+    
+    if (player.pos._subV(this.lastPlayer.pos).sqMag() > 0.0001) {      
+      emitEvent({action: "move", pos: player.pos});
+    }
+    if (Math.abs(player.dir - this.lastPlayer.dir) > 0.0001) {
+      emitEvent({action: "number", path: "dir", number: this.player.dir});
+    }
   }
 
   render() {
     let cam = this.cam;
+    cam.renderW = nde.w;
 
     renderer.save();
 
     renderer.set("fill", [100, 100, 50]);
-    renderer.rect(new Vec(0, 0), new Vec(w, w / 16 * 9));
+    renderer.rect(new Vec(0, 0), new Vec(nde.w, nde.w / 16 * 9));
 
 
 
@@ -142,7 +165,7 @@ class SceneGame extends Scene {
       renderer.save();
       renderer.translate(e.pos);
       renderer.rotate(e.dir);
-      renderer.image(tex[e._type.texture], e._type.size._mul(-0.5), e._type.size);
+      renderer.image(tex[e.texture], e.size._mul(-0.5), e.size);
       renderer.restore();
     }
 
