@@ -13,10 +13,12 @@ class SceneEditor extends Scene {
     this.hoveredObject = undefined;
     this.selectedObjects = [];
     this.selectedObjectsOffsets = [];
+
+    this.room = undefined;
   }
-  loadWorld(world) {
-    this.world = new World().from(world);
-    this.world.entities = [];
+  loadRoom(room) {
+    this.room = room;
+    this.cam.pos = room.size._div(2);
   }
 
   start() {
@@ -30,16 +32,16 @@ class SceneEditor extends Scene {
     };
     this.buttons = [
       new ButtonText(new Vec(25, 25), "Exit", this.buttonStyle, {mousedown: [function () {
-        transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
+        nde.transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
       }]}),
       new ButtonText(new Vec(25, 75), "Export", this.buttonStyle, {mousedown: [() => {
-        console.log(`'${JSON.stringify(this.world)}'`);
+        console.log(`'${JSON.stringify(this.room)}'`);
       }]}),
     ];
   }
 
   keydown(e) {
-    let objects = this.world.objects;
+    let objects = this.room.objects;
 
     if (nde.getKeyEqual(e.key,"Pause")) {
       nde.transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
@@ -57,7 +59,7 @@ class SceneEditor extends Scene {
 
   update(dt) {
     let cam = this.cam;
-    let objects = this.world.objects;
+    let objects = this.room.objects;
 
     cam.pos.addV(new Vec(
       nde.getKeyPressed("Move Right") - nde.getKeyPressed("Move Left"),
@@ -83,13 +85,22 @@ class SceneEditor extends Scene {
   }
 
   wheel(e) {
+    if (nde.getKeyPressed("mouse0")) {
+      for (let i = 0; i < this.selectedObjects.length; i++) {
+        let o = this.selectedObjects[i];
+        
+        o.dir += Math.sign(e.deltaY) * Math.PI / 16;
+      }
+      return;
+    }
+
     if (e.deltaY < 0) this.cam.w /= 1.2;
     else this.cam.w *= 1.2;
   }
 
   mousedown(e) {
     let cam = this.cam;
-    let objects = this.world.objects;
+    let objects = this.room.objects;
 
     let ctrlPressed = nde.getKeyPressed("Ctrl");
     let selected = this.selectedObjects.includes(this.hoveredObject);
@@ -124,16 +135,12 @@ class SceneEditor extends Scene {
 
   render() {
     let cam = this.cam;
-    this.cam.renderW = nde.w;
+    let room = this.room;
+
+    cam.renderW = nde.w;
     this.uicam.renderW = nde.w;
-
+    
     renderer.save();
-
-    renderer.set("fill", [100, 100, 50]);
-    renderer.rect(new Vec(0, 0), new Vec(nde.w, nde.w / 16 * 9));
-
-    renderer.restore();
-
 
 
     renderer.save();
@@ -141,9 +148,46 @@ class SceneEditor extends Scene {
     cam.applyTransform();
     renderer.set("lineWidth", cam.unScaleVec(new Vec(1)).x);
 
+    renderer.save();
+    let tl = cam.pos._subV(new Vec(cam.w, cam.w / 16 * 9).mul(0.5)).floor();
+    renderer.translate(tl);
+    
+    let v = new Vec();
+
+    for (v.x = 0; v.x < cam.w + 1; v.x++) {
+      for (v.y = 0; v.y < cam.w / 16 * 9 + 1; v.y++) {
+        if (tl.x + v.x < 0 || tl.x + v.x >= room.size.x || tl.y + v.y < 0 || tl.y + v.y >= room.size.y) continue;
+
+        materials[room.grid[tl.x + v.x + (tl.y + v.y) * room.size.x]].render(v);
+      }
+    }
+    
+    renderer.restore();
 
 
-    let camSize = new Vec(16, 9);
+    
+
+    for (let i = 0; i < room.objects.length; i++) {
+      let o = room.objects[i];
+      
+      renderer.save();
+      o.render(o.pos);
+      
+      renderer.translate(o.pos);
+
+      renderer.set("stroke", 255);
+      renderer.set("fill", [0, 0, 0, 0]);
+      if (this.selectedObjects.includes(o)) renderer.set("stroke", [0, 0, 255]);
+      if (o == this.hoveredObject) renderer.set("stroke", [255, 0, 0]);
+
+      renderer.rect(o.size._mul(-0.5), o.size);
+
+      renderer.restore();
+    }
+    
+    
+
+    let camSize = new Vec(cam.w, cam.w / 16 * 9);
     let noiseImg = scenes.game.noiseImg;
     let pos = cam.pos._divV(camSize).floor().mulV(camSize);
 
@@ -159,35 +203,10 @@ class SceneEditor extends Scene {
     renderer.restore();
 
 
-
-    for (let i = 0; i < this.world.objects.length; i++) {
-      let o = this.world.objects[i];
-      
-      renderer.save();
-      renderer.translate(o.pos);
-      o.render();
-
-      renderer.set("stroke", 255);
-      renderer.set("fill", [0, 0, 0, 0]);
-      if (this.selectedObjects.includes(o)) renderer.set("stroke", [0, 0, 255]);
-      if (o == this.hoveredObject) renderer.set("stroke", [255, 0, 0]);
-
-      renderer.rect(o.size._mul(-0.5), o.size);
-
-      renderer.restore();
-    }
-
-    renderer.save();
-    renderer.set("fill", [200, 100, 100]);
-    
-    renderer.image(tex["duck/1"], new Vec(-0.5, -0.5), new Vec(1, 1));
     renderer.restore();
-
-    renderer.restore();
-
     renderer.save();
     this.uicam.applyTransform();
-    this.buttons.forEach(e => e.render());
+    this.buttons.forEach(e => {e.render()});
 
     if (this.selectedObjects.length != 0) {
       let w = 500;
@@ -195,7 +214,7 @@ class SceneEditor extends Scene {
       renderer.translate(new Vec(this.uicam.w - w, 0));
 
       renderer.set("fill", [0, 0, 0, 0.3]);
-      renderer.rect(new Vec(0, 0), new Vec(w, this.uicam.w / 16 * 9));
+      renderer.rect(vecZero, new Vec(w, this.uicam.w / 16 * 9));
 
 
       let props = ["type", "size", "text", "texture", ];
@@ -252,5 +271,6 @@ class SceneEditor extends Scene {
       }
     }
     renderer.restore();
+
   }
 }

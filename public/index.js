@@ -8,6 +8,12 @@ let socket;
 
 let events = [];
 
+let settings = JSON.parse(localStorage.getItem("avloppSettings") || '{"visibilitySamples": 1000, "renderResolution": 100, "lightingEnabled": true}');
+
+
+let vecZero = new Vec(0, 0);
+
+
 
 document.body.onload = e => {
   nde = new NDE(document.getElementsByTagName("main")[0]);
@@ -48,6 +54,8 @@ document.body.onload = e => {
     mainMenu: new SceneMainMenu(),
     lobbyPicker: new SceneLobbyPicker(),
     loading: new SceneLoading(),
+    settings: new SceneSettings(),
+    roomPicker: new SceneRoomPicker(),
   };
 
   nde.registerEvent("keydown", e => {
@@ -68,9 +76,12 @@ document.body.onload = e => {
       socket.emit("join", {lobby: lobby});
       socket.on("join", (data) => {
         id = data.id;
-        scenes.game.loadWorld(data.world);
-        scenes.editor.loadWorld(data.world);
+        
+        scenes.game.loadWorld(new World().from(data.world));
         nde.setScene(scenes.mainMenu);
+
+        scenes.editor.loadRoom(new Room().from(JSON.parse(allRooms[0])));
+        nde.setScene(scenes.editor);
       });
     }
   });
@@ -81,6 +92,7 @@ document.body.onload = e => {
   });
 
   nde.registerEvent("resize", e => {
+    return nde.w * settings.renderResolution / 100;
     //return 432; //new width
   });
 };

@@ -36,7 +36,7 @@ class SceneLobbyPicker extends Scene {
     renderer.save();
 
     renderer.set("fill", 19);
-    renderer.rect(new Vec(0, 0), new Vec(nde.w, nde.w / 16 * 9));
+    renderer.rect(vecZero, new Vec(nde.w, nde.w / 16 * 9));
     
     renderer.restore();
 

@@ -5,17 +5,19 @@ const io = require("socket.io")(server, { cors: { origin: "*" }});
 
 
 
-
-class Vec {
-  constructor(x,y,z,w) {this.x = x; this.y = y; this.z = z; this.w = w}
-}
-global.Vec = Vec;
-
+require("./ndv");
 
 require("./public/constants");
 
 require("./public/entities/EntityBase");
 require("./public/entities/EntityPlayer");
+
+require("./public/objects/ObjectBase");
+require("./public/objects/ObjectText");
+require("./public/objects/ObjectTexture");
+require("./public/objects/ObjectWater");
+
+require("./public/Room");
 
 require("./public/world");
 
@@ -46,7 +48,7 @@ io.on("connection", (socket) => {
       lobby = createLobby(data.lobby);
     }
 
-    player = new EntityPlayer(new Vec(0, 0), "EntityPlayer");
+    player = new EntityPlayer(lobby.world.size._div(2), "EntityPlayer");
     lobby.world.entities.push(player);
 
     socket.emit("join", {
@@ -105,7 +107,7 @@ io.on("connection", (socket) => {
 function createLobby(lobbyId) {
   let lobby = {
     lobbyId: lobbyId,
-    world: new World(),
+    world: new World().random(),
     sockets: {},
     events: {},
   };

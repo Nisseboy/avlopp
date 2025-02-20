@@ -7,6 +7,7 @@ This is a built version of nde (Nils Delicious Engine) and is basically all the 
 /* src/ndv.js */
 /*
 /*
+/*
 
 All of these are valid:
 let v = new Vec();
@@ -141,6 +142,19 @@ class Vec {
     if (this.y) this.y = Math.floor(this.y);
     if (this.z) this.z = Math.floor(this.z);
     if (this.w) this.w = Math.floor(this.w);
+    return this;
+  }
+  
+  /**
+   * Rounds each axis of this vector
+   * 
+   * @return {Vec} this
+   */
+  round() {
+    if (this.x) this.x = Math.round(this.x);
+    if (this.y) this.y = Math.round(this.y);
+    if (this.z) this.z = Math.round(this.z);
+    if (this.w) this.w = Math.round(this.w);
     return this;
   }
 
@@ -290,6 +304,7 @@ class Vec {
 
 
   _floor() {return this.copy().floor()}
+  _round() {return this.copy().round()}
 
   _normalize() {return this.copy().normalize()}
 
@@ -310,6 +325,7 @@ class Vec {
 
   _mix(v2, i) {return this.copy().mix(v2, i)}
 }
+
 
 
 

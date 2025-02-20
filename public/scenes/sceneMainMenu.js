@@ -22,7 +22,10 @@ class SceneMainMenu extends Scene {
         nde.transition = new TransitionSlide(scenes.game, new TimerTime(0.2));
       }]}),
       new ButtonText(new Vec(50, 340), "Editor", buttonStyle, {mousedown: [function () {
-        nde.transition = new TransitionSlide(scenes.editor, new TimerTime(0.2));
+        nde.transition = new TransitionSlide(scenes.roomPicker, new TimerTime(0.2));
+      }]}),
+      new ButtonText(new Vec(50, 550), "Settings", buttonStyle, {mousedown: [function () {
+        nde.transition = new TransitionSlide(scenes.settings, new TimerTime(0.2));
       }]}),
     ];
   }
@@ -41,7 +44,7 @@ class SceneMainMenu extends Scene {
     renderer.save();
 
     renderer.set("fill", 19);
-    renderer.rect(new Vec(0, 0), new Vec(nde.w, nde.w / 16 * 9));
+    renderer.rect(vecZero, new Vec(nde.w, nde.w / 16 * 9));
     
     renderer.restore();
 

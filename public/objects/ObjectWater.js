@@ -15,3 +15,8 @@ class ObjectWater extends ObjectTexture {
     
   }
 }
+
+
+if (global) {
+  global.ObjectWater = ObjectWater;
+}

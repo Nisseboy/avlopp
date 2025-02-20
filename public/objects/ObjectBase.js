@@ -3,6 +3,8 @@ class ObjectBase {
     this.type = this.constructor.name;
     this.pos = pos;
     this.size = size;
+
+    this.dir = 0;
   }
 
   inBounds(pos) {
@@ -12,11 +14,12 @@ class ObjectBase {
   from(o) {
     if (o.pos) this.pos = new Vec().from(o.pos); else this.pos = new Vec(1, 1);
     if (o.size) this.size = new Vec().from(o.size); else this.size = new Vec(1, 1);
+    this.dir = o.dir;
 
     return this;
   }
   
-  render() {}
+  render(pos) {}
 }
 
 
@@ -34,3 +37,9 @@ let objectPrefabs = [
   {type: "ObjectTexture", size: new Vec(1, 1), texture: "duck/1"},
   {type: "ObjectWater", size: new Vec(10, 10), texture: "water/1"},
 ];
+
+
+if (global) {
+  global.ObjectBase = ObjectBase;
+  global.cloneObject = cloneObject;
+}

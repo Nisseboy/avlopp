@@ -1,4 +1,4 @@
-class SceneObjectPicker extends Scene {
+class SceneRoomPicker extends Scene {
   constructor() {
     super();
 
@@ -18,48 +18,33 @@ class SceneObjectPicker extends Scene {
     this.buttons = [];
 
 
-    let types = [];
-    for (let i in objectPrefabs) {
-      let op = objectPrefabs[i];
-      if (!types.includes(op.type)) types.push(op.type);
-    }
 
 
     let y = 50;
-    for (let ot of types) {
-      let x = 49;
-
-      if (ot != "ObjectBase")this.buttons.push(new ButtonText(new Vec(x, y), ot, buttonStyle, e => {}));
-      y += 40;
-
-      for (let i = 0; i < objectPrefabs.length; i++) {
-        let o = objectPrefabs[i];
-        if (o.type != ot) continue;
-
-        let texture = o.texture ? tex[o.texture] : new Img(new Vec(10, 10));
-
-        this.buttons.push(new ButtonImage(new Vec(x, y), new Vec(100, 100), texture, buttonStyle, {mouseup: [e => {
-          let ob = cloneObject(o);
-          ob.pos = scenes.editor.cam.pos.copy();
-
-          scenes.editor.room.objects.push(ob);
-          nde.setScene(scenes.editor);
-        }]}));
-        
-        x += 130;
-        if (x > this.cam.w - 200) {
-          x = 50;
-          y += 180;
-        }
-      }
-
-      if (x != 49) y += 130 + 40;
+    for (let room of allRooms) {
+      this.buttons.push(new ButtonText(new Vec(50, y), JSON.parse(room).name, buttonStyle, {mouseup: [e => {
+        scenes.editor.loadRoom(new Room().from(JSON.parse(room)));
+        nde.setScene(scenes.editor);
+      }]}));
+      y += 50;
     }
+
+    this.buttons.push(new ButtonText(new Vec(50, y), "+", buttonStyle, {mouseup: [e => {
+      let name = prompt("Name");
+      let size = prompt("Size (divisible by 5)");
+
+      if (name != "" && size != "" && name != null && size != null) {
+        size = Math.floor(size * 5) / 5;
+        let room = new Room(name, 1, new Vec(parseInt(size), parseInt(size))).generate();
+        scenes.editor.loadRoom(room);
+        nde.setScene(scenes.editor);
+      }
+    }]}));
   }
 
   keydown(e) {
     if (nde.getKeyEqual(e.key,"Pause") || nde.getKeyEqual(e.key,"Object Picker")) {
-      nde.setScene(scenes.editor);
+      nde.setScene(scenes.mainMenu);
     }
   }
 

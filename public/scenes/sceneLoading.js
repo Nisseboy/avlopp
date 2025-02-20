@@ -17,18 +17,19 @@ class SceneLoading extends Scene {
 
   render() {
     let cam = this.cam;
+    cam.renderW = nde.w;
 
     renderer.save();
 
     renderer.set("fill", [100, 100, 50]);
-    renderer.rect(new Vec(0, 0), new Vec(nde.w, nde.w / 16 * 9));
+    renderer.rect(vecZero, new Vec(nde.w, nde.w / 16 * 9));
 
     cam.applyTransform();
 
     renderer.set("font", "100px monospace");
     renderer.set("textAlign", ["center", "middle"]);
     renderer.set("fill", 255);
-    renderer.text("Loading...", new Vec(0, 0));
+    renderer.text("Loading...", vecZero);
 
     renderer.restore();
   }

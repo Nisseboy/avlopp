@@ -13,7 +13,19 @@ class ObjectTexture extends ObjectBase {
     return this;
   }
 
-  render() {
-    renderer.image(tex[this.texture], this.size._mul(-0.5), this.size);
+  render(pos) {
+    renderer.save();
+    
+    renderer.translate(pos);
+    renderer.rotate(this.dir);
+    renderer.translate(this.size._mul(-0.5));
+    renderer.image(tex[this.texture], vecZero, this.size);
+
+    renderer.restore();
   }
+}
+
+
+if (global) {
+  global.ObjectTexture = ObjectTexture;
 }

@@ -17,25 +17,39 @@ class SceneGame extends Scene {
       pxls[i++] = 20;
     }
     this.noiseImg.ctx.putImageData(imageData, 0, 0);
+
+    this.visibilityMaskTexture = new Img(renderer.img.size);
+    this.lightingTexture = new Img(renderer.img.size);
   }
   loadWorld(world) {    
-    this.world = new World().from(world);
+    this.world = world;
+    this.world.lights.push(new LightPoint(new Vec(8, 4.5), new Vec(8, 8), 0.1));
+    this.world.lights.push(new LightPoint(new Vec(8, 4.5), new Vec(8, 8), 1));
 
     this.player = this.world.entities.find(e=>e.id == id);
     this.lastPlayer = cloneEntity(this.player);
+
+    this.idLookup = {};
+    for (let i in this.world.entities) {
+      let e = this.world.entities[i];
+      this.idLookup[e.id] = e;
+    }
 
     socket.on("update", data => {
       for (let e of data.events) {
         switch (e.action) {
           case "connect":
-            this.world.entities.push(cloneEntity(e.player, EntityPlayerOther));
+            let newPlayer = cloneEntity(e.player, EntityPlayerOther);
+            this.world.entities.push(newPlayer);
+            this.idLookup[e.id] = newPlayer;
             break;
           case "disconnect":
             this.world.entities.splice(this.world.entities.findIndex(elem=>elem.id == e.id), 1);
+            delete this.idLookup[e.id];
             break;
 
           case "move":
-            let entity = this.world.entities.find(elem=>elem.id == e.id);
+            let entity = this.idLookup[e.id];
             
             entity.newPos.from(e.pos);
             entity.diffPos = entity.newPos._subV(entity.pos);
@@ -43,10 +57,10 @@ class SceneGame extends Scene {
             
             break;
           case "vec":
-            this.world.entities.find(elem=>elem.id == e.id)[e.path].from(e.vec);
+            this.idLookup[e.id][e.path].from(e.vec);
             break;
           case "number":
-            this.world.entities.find(elem=>elem.id == e.id)[e.path] = e.number;
+            this.idLookup[e.id][e.path] = e.number;
             break;
         }        
       }
@@ -84,6 +98,14 @@ class SceneGame extends Scene {
       nde.transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
     }
   }
+  
+
+  wheel(e) {
+    if (!nde.debug) return;
+
+    if (e.deltaY < 0) this.cam.w /= 1.2;
+    else this.cam.w *= 1.2;
+  }
 
   update(dt) {
     let player = this.player;
@@ -105,9 +127,12 @@ class SceneGame extends Scene {
       let e = this.world.entities[i];
       e.update(dt);
     }    
+    this.world.lights[0].pos.from(player.pos);
+    this.world.lights[0].cached = false;
     
-    //this.cam.pos.addV(this.player.pos._subV(this.cam.pos).mul(dt * 3));
+    //this.cam.pos.addV(this.player.pos._subV(this.cam.pos).mul(dt * 1));
     this.cam.pos.from(this.player.pos);
+
     
     if (player.pos._subV(this.lastPlayer.pos).sqMag() > 0.0001) {      
       emitEvent({action: "move", pos: player.pos});
@@ -115,16 +140,24 @@ class SceneGame extends Scene {
     if (Math.abs(player.dir - this.lastPlayer.dir) > 0.0001) {
       emitEvent({action: "number", path: "dir", number: this.player.dir});
     }
+
+    nde.debugStats.pos = this.cam.pos._floor().toString();
   }
 
   render() {
     let cam = this.cam;
     cam.renderW = nde.w;
+    if (this.visibilityMaskTexture.size.x != renderer.img.size.x) this.visibilityMaskTexture.resize(renderer.img.size);
+    if (this.lightingTexture.size.x != renderer.img.size.x) this.lightingTexture.resize(renderer.img.size);
+
+    this.lightingTexture.ctx.fillStyle = "rgb(0, 0, 0)";
+    this.lightingTexture.ctx.fillRect(0, 0, this.lightingTexture.size.x, this.lightingTexture.size.y);
 
     renderer.save();
 
-    renderer.set("fill", [100, 100, 50]);
-    renderer.rect(new Vec(0, 0), new Vec(nde.w, nde.w / 16 * 9));
+
+    //renderer.set("fill", [100, 100, 50]);
+    //renderer.rect(vecZero, new Vec(nde.w, nde.w / 16 * 9));
 
 
 
@@ -132,8 +165,35 @@ class SceneGame extends Scene {
 
     cam.applyTransform();
     renderer.set("lineWidth", cam.unScaleVec(new Vec(1)).x);
+
+    renderer.save();
+    let tl = cam.pos._subV(new Vec(cam.w, cam.w / 16 * 9).mul(0.5)).floor();
+    renderer.translate(tl);
+    
+    let v = new Vec();
+
+    for (v.x = 0; v.x < cam.w + 1; v.x++) {
+      for (v.y = 0; v.y < cam.w / 16 * 9 + 1; v.y++) {
+        if (tl.x + v.x < 0 || tl.x + v.x >= this.world.size.x || tl.y + v.y < 0 || tl.y + v.y >= this.world.size.y) continue;
+
+        materials[this.world.grid[tl.x + v.x + (tl.y + v.y) * this.world.size.x]].render(v);
+      }
+    }
+    
+    renderer.restore();
+
+
+    
+
+    for (let i = 0; i < this.world.objects.length; i++) {
+      let o = this.world.objects[i];
+
+      o.render(o.pos);
+      
+    }
     
     
+
     let camSize = new Vec(cam.w, cam.w / 16 * 9);
     let noiseImg = this.noiseImg;
     let pos = cam.pos._divV(camSize).floor().mulV(camSize);
@@ -150,24 +210,27 @@ class SceneGame extends Scene {
     renderer.restore();
 
 
-    for (let i = 0; i < this.world.objects.length; i++) {
-      let o = this.world.objects[i];
-
-      renderer.save();
-      renderer.translate(o.pos);
-      o.render();
-      renderer.restore();
-    }
 
     for (let i = 0; i < this.world.entities.length; i++) {
       let e = this.world.entities[i];
-
-      renderer.save();
-      renderer.translate(e.pos);
-      renderer.rotate(e.dir);
-      renderer.image(tex[e.texture], e.size._mul(-0.5), e.size);
-      renderer.restore();
+      e.render(e.pos);
     }
+
+
+    if (settings.lightingEnabled) {
+      renderer.img.ctx.globalCompositeOperation = "multiply";
+      for (let i = 0; i < this.world.lights.length; i++) {
+        let l = this.world.lights[i];
+  
+        l.render(l.pos, this.lightingTexture);
+      }
+      renderer.image(this.lightingTexture, cam.pos._subV(camSize._div(2)), camSize);
+  
+  
+      createVisibilityMask(this.visibilityMaskTexture, cam.pos);
+      renderer.image(this.visibilityMaskTexture, cam.pos._subV(camSize._div(2)), camSize);
+    }
+
 
     renderer.restore();
   }

@@ -17,14 +17,36 @@ class EntityBase {
   doMovement(dt) {
     if (this.movement.sqMag() < 0.01) return;
 
-    this.pos.addV(this.movement._mul(this.speed * this.speedMult * dt));
+    let delta = this.movement._mul(this.speed * this.speedMult * dt);
+    this.pos.x += delta.x;
+    if (this.checkSolid(this.pos._floor())) this.pos.x -= delta.x;
+    this.pos.y += delta.y;
+    if (this.checkSolid(this.pos._floor())) this.pos.y -= delta.y;
 
     let diff = getDeltaAngle((Math.atan2(this.movement.y, this.movement.x)), this.dir);
     this.dir -= diff * 10 * dt;
   }
 
+  checkSolid(pos) {
+    let world = scenes.game.world;
+    if (pos.x < 0 || pos.y < 0 || pos.x >= world.size.x || pos.y >= world.size.y) return true;
+
+    return materials[world.grid[pos.x + pos.y * world.size.x]].solid;
+  }
+
   update(dt) {
     this.doMovement(dt);
+  }
+
+  render(pos) {
+    renderer.save();
+    
+    renderer.translate(pos);
+    renderer.rotate(this.dir);
+    renderer.translate(this.size._mul(-0.5));
+    renderer.image(tex[this.texture], vecZero, this.size);
+
+    renderer.restore();
   }
 
   from(data) {
