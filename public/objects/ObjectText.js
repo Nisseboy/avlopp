@@ -7,7 +7,7 @@ class ObjectText extends ObjectBase {
 
   from(o) {
     super.from(o);
-    this.text = o.text;
+    if (o.text) this.text = o.text; else this.text = "no text";
 
     if (o.size) this.size = new Vec().from(o.size);
     else {

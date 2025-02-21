@@ -7,33 +7,24 @@
 
 
 
-class WorldMaterialBase {
-  constructor(solid, opaque) {
+class WorldMaterial {
+  constructor(solid, opaque, texture) {
     this.solid = solid;
     this.opaque = opaque;
+    this.texture = texture;
   }
   render(pos) {
-
-  }
-}
-class WorldMaterialColor extends WorldMaterialBase {
-  constructor(solid, opaque, color) {
-    super(solid, opaque);
-    this.color = color;
-  }
-  render(pos) {
-    renderer.set("lineWidth", 0);
-    renderer.set("stroke", this.color);
-    renderer.set("fill", this.color);
-    renderer.rect(pos, new Vec(1, 1));
+    renderer.image(tex[this.texture], pos, new Vec(1, 1));
   }
 }
 
 
 let materials = [
-  new WorldMaterialColor(false, false, "rgb(100, 100, 50)"), //0, Grass
-  new WorldMaterialColor(false, false, "rgb(100, 100, 100)"), //1, Floor
-  new WorldMaterialColor(true, true, "rgb(50, 50, 50)"), //2, Wall
+  new WorldMaterial(false, false, "material/grass/1"), //0
+  new WorldMaterial(false, false, "material/floor/1"), //1
+  new WorldMaterial(true, true, "material/wall/1"), //2
+  new WorldMaterial(false, false, "material/floor/drain"), //3
+  new WorldMaterial(false, false, "material/marker/entrance"), //4
 ];
 
 
@@ -49,7 +40,7 @@ class World {
   }
 
   random() {
-    this.size = new Vec(21, 21);
+    this.size = new Vec(11*5, 11*5);
     
     this.grid = new Array(this.size.x * this.size.y).fill(0).map(e=>{return Math.floor(Math.random() * 2.2)});
     this.entities = [];
@@ -60,7 +51,204 @@ class World {
       }
     }
 
-    this.placeRoom(new Room().from(JSON.parse(allRooms[0])).rotate(Math.PI / 2), new Vec(8, 8));
+    let mazeSize = new Vec(this.size.x / 5, this.size.y / 5);
+    let maze = new Array(mazeSize.x).fill(undefined).map(e => {return new Array(mazeSize.y).fill(undefined)});
+    let pos = mazeSize._div(2).floor();
+    maze[pos.x][pos.y] = [false, false, false, false]; 
+
+    let stack = [];
+
+    while (true) {
+      let current = maze[pos.x][pos.y];
+
+      let neighbours = [];
+      let dirs = [];
+      if (pos.x > 0 && maze[pos.x - 1][pos.y] == undefined) {neighbours.push(new Vec(pos.x - 1, pos.y)); dirs.push(0); }
+      if (pos.y > 0 && maze[pos.x][pos.y - 1] == undefined) {neighbours.push(new Vec(pos.x, pos.y - 1)); dirs.push(1); }
+      if (pos.x < mazeSize.x - 1 && maze[pos.x + 1][pos.y] == undefined) {neighbours.push(new Vec(pos.x + 1, pos.y)); dirs.push(2); }
+      if (pos.y < mazeSize.y - 1 && maze[pos.x][pos.y + 1] == undefined) {neighbours.push(new Vec(pos.x, pos.y + 1)); dirs.push(3); }
+
+      if (neighbours.length == 0) {
+        if (stack.length == 0) {
+          break;
+        }
+        pos = stack.pop();
+        
+        continue;
+      }
+      if (neighbours.length > 1) {
+        stack.push(pos);
+      }
+
+      let index = Math.floor(Math.random() * neighbours.length);
+      let neighbour = neighbours[index];
+      let dir = dirs[index];
+
+      current[dir] = true;
+
+      let other = [false, false, false, false];
+      other[(dir + 2) % 4] = true;
+
+      maze[neighbour.x][neighbour.y] = other;
+
+      pos = new Vec(neighbour.x, neighbour.y);
+    }
+
+
+    let parsedRooms = [];
+    let totalWeightAll = 0;
+    for (let i in allRooms) {
+      parsedRooms[i] = JSON.parse(allRooms[i]);
+      totalWeightAll += parsedRooms[i].weight;
+    }
+
+    let occupied = new Array(mazeSize.x).fill(undefined).map(e => {return new Array(mazeSize.y).fill(false)});
+    let gridPos = new Vec(0, 0);
+    for (gridPos.x = 0; gridPos.x < mazeSize.x; gridPos.x++) {
+      for (gridPos.y = 0; gridPos.y < mazeSize.y; gridPos.y++) {
+        if (occupied[gridPos.x][gridPos.y]) continue;
+
+        let pos = gridPos._mul(5);
+
+        let remainingRooms = [...parsedRooms];
+        let totalWeight = totalWeightAll;
+        let remainingSpins = 0;
+
+        let room;
+        middle: while (true) {
+          if (remainingSpins > 0) {
+            room.rotate(Math.PI / 2);
+            remainingSpins--;
+          } else {
+            let index;
+            let rand = Math.random() * totalWeight;
+            let cumWeight = 0;
+  
+            
+            for (let i = 0; i < remainingRooms.length; i++) {
+              let r = remainingRooms[i];
+              cumWeight += r.weight;
+              
+              if (cumWeight > rand) { 
+                index = i;
+                break;
+              }
+            }
+
+            room = new Room().from(remainingRooms[index]);
+            remainingRooms.splice(index, 1);
+            totalWeight -= room.weight;
+
+            room.rotate(Math.floor(Math.random() * 4) * Math.PI / 2);
+            remainingSpins = 3;
+          }
+          
+          
+          
+          
+          let roomPos = new Vec(0, 0);
+          for (roomPos.x = 0; roomPos.x < room.size.x / 5; roomPos.x++) {
+            for (roomPos.y = 0; roomPos.y < room.size.y / 5; roomPos.y++) {
+              let gridPosActual = gridPos._addV(roomPos);
+              if (gridPosActual.x > mazeSize.x - 1 || gridPosActual.y > mazeSize.y - 1 || occupied[gridPosActual.x][gridPosActual.y]) continue middle;
+            }
+          }
+          
+
+          let toReplace = [];
+
+          roomPos = new Vec(0, 0);
+          for (roomPos.y = 0; roomPos.y < room.size.y / 5; roomPos.y++) {
+            let gridPosActual = gridPos._addV(roomPos);
+            let block = maze[gridPosActual.x][gridPosActual.y];
+
+            if (block[0]) {
+              let roomPosActual = new Vec(roomPos.x * 5, roomPos.y * 5 + 2);
+              if (room.grid[roomPosActual.x + roomPosActual.y * room.size.x] != 4 /*Entrance marker*/) continue middle;
+              toReplace.push(roomPosActual);
+            }
+          }
+
+          roomPos = new Vec(0, 0);
+          for (roomPos.x = 0; roomPos.x < room.size.x / 5; roomPos.x++) {
+            let gridPosActual = gridPos._addV(roomPos);
+            let block = maze[gridPosActual.x][gridPosActual.y];
+
+            if (block[1]) {
+              let roomPosActual = new Vec(roomPos.x * 5 + 2, roomPos.y * 5);
+              if (room.grid[roomPosActual.x + roomPosActual.y * room.size.x] != 4 /*Entrance marker*/) continue middle;
+              toReplace.push(roomPosActual);
+            }
+          }
+
+          roomPos = new Vec(room.size.x / 5 - 1, 0);
+          for (roomPos.y = 0; roomPos.y < room.size.y / 5; roomPos.y++) {
+            let gridPosActual = gridPos._addV(roomPos);
+            let block = maze[gridPosActual.x][gridPosActual.y];
+
+            if (block[2]) {
+              let roomPosActual = new Vec(roomPos.x * 5 + 4, roomPos.y * 5 + 2);
+              if (room.grid[roomPosActual.x + roomPosActual.y * room.size.x] != 4 /*Entrance marker*/) continue middle;
+              toReplace.push(roomPosActual);
+            }
+          }
+
+          roomPos = new Vec(0, room.size.y / 5 - 1);
+          for (roomPos.x = 0; roomPos.x < room.size.x / 5; roomPos.x++) {
+            let gridPosActual = gridPos._addV(roomPos);
+            let block = maze[gridPosActual.x][gridPosActual.y];
+
+            if (block[3]) {
+              let roomPosActual = new Vec(roomPos.x * 5 + 2, roomPos.y * 5 + 4);
+              if (room.grid[roomPosActual.x + roomPosActual.y * room.size.x] != 4 /*Entrance marker*/) continue middle;
+              toReplace.push(roomPosActual);
+            }
+          }
+
+          for (let p of toReplace) {
+            room.grid[p.x + p.y * room.size.x] = 1;
+            if (p.x > 0 && room.grid[(p.x - 1) + (p.y) * room.size.x] == 4)room.grid[(p.x - 1) + (p.y) * room.size.x] = 1;
+            if (p.y > 0 && room.grid[(p.x) + (p.y - 1) * room.size.x] == 4)room.grid[(p.x) + (p.y - 1) * room.size.x] = 1;
+            if (p.x < room.size.x - 1 && room.grid[(p.x + 1) + (p.y) * room.size.x] == 4)room.grid[(p.x + 1) + (p.y) * room.size.x] = 1;
+            if (p.y < room.size.y - 1 && room.grid[(p.x) + (p.y + 1) * room.size.x] == 4)room.grid[(p.x) + (p.y + 1) * room.size.x] = 1;
+          }
+
+          
+          roomPos = new Vec(0, 0);
+          for (roomPos.x = 0; roomPos.x < room.size.x / 5; roomPos.x++) {
+            for (roomPos.y = 0; roomPos.y < room.size.y / 5; roomPos.y++) {
+              let gridPosActual = gridPos._addV(roomPos);
+              occupied[gridPosActual.x][gridPosActual.y] = true;
+            }
+          }
+
+          this.placeRoom(room, pos);
+
+
+          break;
+        }
+      }
+    }
+
+    for (let i in this.grid) {
+      if (this.grid[i] == 4 /*Entrance marker*/) this.grid[i] = 2; /*Wall*/
+    }
+
+    /*let str = "";
+    for (let x = 0; x < mazeSize.x; x++) {
+      for (let y = 0; y < mazeSize.y; y++) {
+        let block = maze[x][y];
+        str += block[0] ? 1 : 0;
+        str += block[1] ? 1 : 0;
+        str += block[2] ? 1 : 0;
+        str += block[3] ? 1 : 0;
+
+        str += " ";
+      }
+      str += "\n";
+    }
+
+    console.log(str);*/
 
     return this;
   }
@@ -169,7 +357,7 @@ class World {
       this.objects[i] = ob;
     }
 
-    this.grid = data.grid;
+    this.grid = [...data.grid];
 
     return this;
   }

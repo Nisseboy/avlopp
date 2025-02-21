@@ -24,7 +24,7 @@ class SceneGame extends Scene {
   loadWorld(world) {    
     this.world = world;
     this.world.lights.push(new LightPoint(new Vec(8, 4.5), new Vec(8, 8), 0.1));
-    this.world.lights.push(new LightPoint(new Vec(8, 4.5), new Vec(8, 8), 1));
+    this.world.objects.forEach(object => {object.onLoad()});
 
     this.player = this.world.entities.find(e=>e.id == id);
     this.lastPlayer = cloneEntity(this.player);
@@ -115,13 +115,8 @@ class SceneGame extends Scene {
       nde.getKeyPressed("Move Right") - nde.getKeyPressed("Move Left"),
       nde.getKeyPressed("Move Down") - nde.getKeyPressed("Move Up"),
     ).normalize();
-    player.speedMult = nde.getKeyPressed("Run") ? 2 : 1
+    player.speedMult = nde.getKeyPressed("Run") ? 2 : 1;
 
-    for (let o of this.world.objects) {
-      if (o.type == "ObjectWater" && o.inBounds(player.pos) && player.movement.sqMag() != 0) {
-        player.speedMult *= 0.7;
-      }
-    }
 
     for (let i = 0; i < this.world.entities.length; i++) {
       let e = this.world.entities[i];

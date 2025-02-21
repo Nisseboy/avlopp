@@ -14,12 +14,19 @@ class ObjectBase {
   from(o) {
     if (o.pos) this.pos = new Vec().from(o.pos); else this.pos = new Vec(1, 1);
     if (o.size) this.size = new Vec().from(o.size); else this.size = new Vec(1, 1);
-    this.dir = o.dir;
+    if (o.dir) this.dir = o.dir; else this.dir = 0;
 
     return this;
   }
   
   render(pos) {}
+
+  onLoad() {
+
+  }
+  onUnload() {
+
+  }
 }
 
 
@@ -35,7 +42,8 @@ let objectPrefabs = [
   {type: "ObjectText", text: "duck/1"},
 
   {type: "ObjectTexture", size: new Vec(1, 1), texture: "duck/1"},
-  {type: "ObjectWater", size: new Vec(10, 10), texture: "water/1"},
+  {type: "ObjectTextureLight", size: new Vec(1, 1), texture: "duck/1", lightSize: new Vec(8, 8), lightStrength: 1},
+  //{type: "ObjectWater", size: new Vec(10, 10), texture: "water/1"},
 ];
 
 

@@ -1,3 +1,5 @@
+
+
 class LightBase {
   constructor(pos, size, strength) {
     this.pos = pos;
@@ -53,11 +55,12 @@ class LightBase {
   }
 }
 
+let lightPointTexture = createLightGradient(new Vec(320, 320), new Vec(255, 220, 100), 100);
 class LightPoint extends LightBase {
   constructor(pos, size, strength) {
     super(pos, size, strength);
     
-    this.tex = createLightGradient(new Vec(320, 320), new Vec(255, 220, 100), 100);
+    this.tex = lightPointTexture;
   }
 }
 

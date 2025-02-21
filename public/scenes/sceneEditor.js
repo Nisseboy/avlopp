@@ -14,6 +14,8 @@ class SceneEditor extends Scene {
     this.selectedObjects = [];
     this.selectedObjectsOffsets = [];
 
+    this.selectedMaterial = 0;
+
     this.room = undefined;
   }
   loadRoom(room) {
@@ -60,6 +62,9 @@ class SceneEditor extends Scene {
   update(dt) {
     let cam = this.cam;
     let objects = this.room.objects;
+    let mousePos = cam.from(nde.mouse);
+
+    let paintPressed = nde.getKeyPressed("Paint Modifier");
 
     cam.pos.addV(new Vec(
       nde.getKeyPressed("Move Right") - nde.getKeyPressed("Move Left"),
@@ -67,25 +72,35 @@ class SceneEditor extends Scene {
     ).mul(dt / 16 * cam.w * 10 * (nde.getKeyPressed("Run") ? 2.5 : 1)));
 
     this.hoveredObject = undefined;
-    for (let o of objects) {
-      if (o.inBounds(cam.from(nde.mouse))) this.hoveredObject = o;
-    }
+    if (paintPressed) {
+      if (nde.getKeyPressed("Move/Paint")) {
+        if (mousePos.x >= 0 && mousePos.x < this.room.size.x && mousePos.y >= 0 && mousePos.y < this.room.size.y) {
+          this.room.grid[Math.floor(mousePos.x) + Math.floor(mousePos.y) * this.room.size.x] = this.selectedMaterial;
+        }
+      }
 
-    if (nde.getKeyPressed("mouse0")) {
-      for (let i = 0; i < this.selectedObjects.length; i++) {
-        let o = this.selectedObjects[i];
-        
-        o.pos = cam.from(nde.mouse)._addV(this.selectedObjectsOffsets[i]);
 
-        if (nde.getKeyPressed("Ctrl")) {
-          o.pos.mul(5).floor().div(5);
+    } else {
+      for (let o of objects) {
+        if (o.inBounds(mousePos)) this.hoveredObject = o;
+      }
+  
+      if (nde.getKeyPressed("Move/Paint")) {
+        for (let i = 0; i < this.selectedObjects.length; i++) {
+          let o = this.selectedObjects[i];
+          
+          o.pos = mousePos._addV(this.selectedObjectsOffsets[i]);
+  
+          if (nde.getKeyPressed("Snap")) {
+            o.pos.mul(5).floor().div(5);
+          }
         }
       }
     }
   }
 
   wheel(e) {
-    if (nde.getKeyPressed("mouse0")) {
+    if (nde.getKeyPressed("Move/Paint")) {
       for (let i = 0; i < this.selectedObjects.length; i++) {
         let o = this.selectedObjects[i];
         
@@ -102,40 +117,47 @@ class SceneEditor extends Scene {
     let cam = this.cam;
     let objects = this.room.objects;
 
-    let ctrlPressed = nde.getKeyPressed("Ctrl");
+    let paintPressed = nde.getKeyPressed("Paint Modifier");
+    let snapPressed = nde.getKeyPressed("Snap");
     let selected = this.selectedObjects.includes(this.hoveredObject);
     
-
-    if (!this.hoveredObject) {
-      if (!ctrlPressed) this.selectedObjects.length = 0;
-      return;
-    }
-
-    if (e.button == 0) {
-      if (ctrlPressed) {      
-        if (selected) this.selectedObjects.splice(this.selectedObjects.indexOf(this.hoveredObject));
-      } else if (!selected) {
-        this.selectedObjects.length = 0;
+    if (!paintPressed) {
+      if (!this.hoveredObject) {
+        if (!snapPressed) this.selectedObjects.length = 0;
+        return;
       }
-      
-      if (!selected) {
-        this.selectedObjects.push(this.hoveredObject);
+  
+      if (e.button == 0) {
+        if (snapPressed) {      
+          if (selected) this.selectedObjects.splice(this.selectedObjects.indexOf(this.hoveredObject));
+        } else if (!selected) {
+          this.selectedObjects.length = 0;
+        }
+        
+        if (!selected) {
+          this.selectedObjects.push(this.hoveredObject);
+        }
+        
+  
+        for (let i = 0; i < this.selectedObjects.length; i++) {
+          this.selectedObjectsOffsets[i] = this.selectedObjects[i].pos._subV(cam.from(nde.mouse));
+        }
       }
-      
-
-      for (let i = 0; i < this.selectedObjects.length; i++) {
-        this.selectedObjectsOffsets[i] = this.selectedObjects[i].pos._subV(cam.from(nde.mouse));
+  
+      if (e.button == 2) {
+        objects.splice(objects.indexOf(this.hoveredObject), 1);
       }
-    }
-
-    if (e.button == 2) {
-      objects.splice(objects.indexOf(this.hoveredObject), 1);
     }
   }
 
   render() {
     let cam = this.cam;
     let room = this.room;
+
+    let paintOpen = nde.getKeyPressed("Paint Modifier");
+    let propsOpen = this.selectedObjects.length != 0;
+
+    let mousePos = cam.from(nde.mouse);
 
     cam.renderW = nde.w;
     this.uicam.renderW = nde.w;
@@ -184,6 +206,13 @@ class SceneEditor extends Scene {
 
       renderer.restore();
     }
+
+    if (paintOpen) {
+      renderer.save();
+      renderer.set("fill", "rgba(0, 0, 0, 0.2)");
+      renderer.rect(mousePos._floor(), new Vec(1, 1));
+      renderer.restore();
+    }
     
     
 
@@ -208,16 +237,17 @@ class SceneEditor extends Scene {
     this.uicam.applyTransform();
     this.buttons.forEach(e => {e.render()});
 
-    if (this.selectedObjects.length != 0) {
-      let w = 500;
-
+    let w = 500;
+    if (paintOpen || propsOpen) {
       renderer.translate(new Vec(this.uicam.w - w, 0));
 
       renderer.set("fill", [0, 0, 0, 0.3]);
       renderer.rect(vecZero, new Vec(w, this.uicam.w / 16 * 9));
+    }
 
-
-      let props = ["type", "size", "text", "texture", ];
+    renderer.save();
+    if (!paintOpen && propsOpen) {
+      let props = ["type", "size", "text", "texture", "lightSize", "lightStrength"];
 
       for (let o of this.selectedObjects) {
         for (let i = 0; i < props.length; i++) {
@@ -229,11 +259,11 @@ class SceneEditor extends Scene {
       }
       if (props.includes("text")) props.splice(props.indexOf("size"), 1);
       
-      renderer.set("fill", 255);
 
       for (let i = 0; i < props.length; i++) {
         let prop = props[i];
 
+        renderer.set("fill", 255);
         renderer.text(prop, new Vec(25, 25 + this.buttonStyle.padding));
 
         switch(prop) {
@@ -265,11 +295,62 @@ class SceneEditor extends Scene {
               scenes.texturePicker.callback = (newTex) => {for (let o of this.selectedObjects) o.texture = newTex;};
             }]}).render();
             break;
+
+          case "lightSize":
+            new ButtonText(new Vec(w / 3, 25), "Edit", this.buttonStyle, {mousedown: [() => {
+              let text = prompt("New size", this.selectedObjects[0].lightSize.x + "," + this.selectedObjects[0].lightSize.y);
+              if (text == null || text == "") return;
+              let axes = text.split(",").map(parseFloat);
+              
+              for (let o of this.selectedObjects) o.lightSize = new Vec(axes[0], axes[1]);
+            }]}).render();
+            break;
+          
+          case "lightStrength":
+            new ButtonText(new Vec(w / 3, 25), "Edit", this.buttonStyle, {mousedown: [() => {
+              let text = prompt("New strength", this.selectedObjects[0].lightStrength);
+              if (text == null || text == "") return;
+              for (let o of this.selectedObjects) o.lightStrength = parseFloat(text);
+            }]}).render();
+            break;
         }
 
         renderer.translate(new Vec(0, 50));
       }
     }
+    renderer.restore();
+
+    if (paintOpen) {
+      let pos = new Vec(10, 10);
+      let h = this.uicam.w / 16 * 9;
+      let style = {
+        fill: [0, 0, 0, 0.3],
+        stroke: 255,
+  
+        text: {font: "20px monospace", fill: 255}, 
+        hover: {stroke: [255, 0, 0]}
+      };
+
+      for (let i = 0; i < materials.length; i++) {
+        let m = materials[i];
+
+        if (this.selectedMaterial == i) style.stroke = [255, 0, 0];
+
+        new ButtonImage(pos, new Vec(50, 50), tex[m.texture], style, {mousedown: [() => {
+          this.selectedMaterial = i;
+        }]}).render();
+
+        style.stroke = 255;
+
+        pos.y += 60;
+        if (pos.y >= h - 10) {
+          pos.x += 60;
+          pos.y = 10;
+        }
+      }
+    }
+
+
     renderer.restore();
 
   }

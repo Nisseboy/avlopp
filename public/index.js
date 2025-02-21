@@ -25,25 +25,29 @@ document.body.onload = e => {
   //nde.targetFPS = 60;
 
   nde.controls = {
-    "Move Up": "w",
-    "Move Down": "s",
-    "Move Left": "a",
-    "Move Right": "d",
-
+    //General
     "Move Camera Up": "ArrowUp",
     "Move Camera Down": "ArrowDown",
     "Move Camera Left": "ArrowLeft",
     "Move Camera Right": "ArrowRight",
+    "Debug Mode": "l",
 
-    "Ctrl": "Control",
-    "mouse0": "mouse0",
-    "Object Picker": "q",
-    "Delete": "Delete",
+    //Game
+    "Move Up": "w",
+    "Move Down": "s",
+    "Move Left": "a",
+    "Move Right": "d",
     
     "Run": "Shift",
     "Interact": "f",
     "Pause": "Escape",
-    "Debug Mode": "l",
+
+    //Editor
+    "Snap": "Control",
+    "Paint Modifier": "Shift",
+    "Move/Paint": "mouse0",
+    "Object Picker": "q",
+    "Delete": "Delete",
   };
 
   scenes = {
@@ -80,8 +84,8 @@ document.body.onload = e => {
         scenes.game.loadWorld(new World().from(data.world));
         nde.setScene(scenes.mainMenu);
 
-        scenes.editor.loadRoom(new Room().from(JSON.parse(allRooms[0])));
-        nde.setScene(scenes.editor);
+        //scenes.editor.loadRoom(new Room().from(JSON.parse(allRooms[0])));
+        //nde.setScene(scenes.editor);
       });
     }
   });
@@ -120,3 +124,12 @@ var getDeltaAngle = function () {
     return equivalent(target - current);
   }
 }();
+
+function RNG(seed) {
+  var m = 2**35 - 31
+  var a = 185852
+  var s = seed % m
+  return function () {
+      return (s = s * a % m) / m
+  }
+}

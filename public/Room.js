@@ -1,5 +1,9 @@
 let allRooms = [
-  '{"name":"name","weight":1,"size":{"x":5,"y":5},"grid":[2,2,2,2,2,2,1,1,1,2,2,1,1,1,2,2,1,1,1,2,2,2,2,2,2],"objects":[{"type":"ObjectTexture","pos":{"x":2,"y":2},"size":{"x":2,"y":3},"dir":0.7853981633974483,"texture":"duck/1"},{"type":"ObjectText","pos":{"x":2.4000000000000004,"y":4.4},"size":{"x":8.25,"y":1},"dir":0,"text":"[w a s d shift]"}]}',
+  '{"name":"Corridor Duck","weight":0.01,"size":{"x":5,"y":5},"grid":[2,4,4,4,2,4,1,1,1,4,4,1,1,1,4,4,1,1,1,4,2,4,4,4,2],"objects":[{"type":"ObjectTextureLight","pos":{"x":1.8,"y":1.8},"size":{"x":2,"y":2},"dir":0.7853981633974483,"texture":"duck/1","lightSize":{"x":8,"y":8},"lightStrength":1}]}',
+  '{"name":"Corridor 1","weight":1,"size":{"x":5,"y":5},"grid":[2,4,4,4,2,4,1,1,1,4,4,1,1,1,4,4,1,1,1,4,2,4,4,4,2],"objects":[]}',
+  '{"name":"Corridor 2","weight":0.2,"size":{"x":5,"y":5},"grid":[2,4,4,4,2,4,1,1,1,4,4,1,1,1,4,4,1,1,3,4,2,4,4,4,2],"objects":[]}',
+  '{"name":"Pond","weight":1,"size":{"x":10,"y":10},"grid":[2,2,4,2,2,2,2,2,2,2,2,1,1,0,0,0,0,1,1,2,2,0,0,0,0,0,0,0,1,4,2,0,0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,0,1,2,2,1,0,0,0,0,0,0,1,2,2,2,4,2,2,2,2,4,2,2],"objects":[{"type":"ObjectTextureLight","pos":{"x":5,"y":5},"size":{"x":6,"y":6},"dir":0,"texture":"water/1","lightSize":{"x":8,"y":8},"lightStrength":1}]}',
+
 ];
 
 class Room {
@@ -73,7 +77,7 @@ class Room {
       this.objects[i] = ob;
     }
 
-    this.grid = data.grid;
+    this.grid = [...data.grid];
 
     return this;
   }

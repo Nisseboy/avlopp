@@ -16,6 +16,7 @@ require("./public/objects/ObjectBase");
 require("./public/objects/ObjectText");
 require("./public/objects/ObjectTexture");
 require("./public/objects/ObjectWater");
+require("./public/objects/ObjectTextureLight");
 
 require("./public/Room");
 

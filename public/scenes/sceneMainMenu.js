@@ -22,7 +22,8 @@ class SceneMainMenu extends Scene {
         nde.transition = new TransitionSlide(scenes.game, new TimerTime(0.2));
       }]}),
       new ButtonText(new Vec(50, 340), "Editor", buttonStyle, {mousedown: [function () {
-        nde.transition = new TransitionSlide(scenes.roomPicker, new TimerTime(0.2));
+        let newScene = scenes.editor.room == undefined ? scenes.roomPicker : scenes.editor;
+        nde.transition = new TransitionSlide(newScene, new TimerTime(0.2));
       }]}),
       new ButtonText(new Vec(50, 550), "Settings", buttonStyle, {mousedown: [function () {
         nde.transition = new TransitionSlide(scenes.settings, new TimerTime(0.2));

@@ -31,11 +31,13 @@ class SceneRoomPicker extends Scene {
 
     this.buttons.push(new ButtonText(new Vec(50, y), "+", buttonStyle, {mouseup: [e => {
       let name = prompt("Name");
-      let size = prompt("Size (divisible by 5)");
+      let size = prompt("Size (divisible by 5)", "5,5");
 
       if (name != "" && size != "" && name != null && size != null) {
-        size = Math.floor(size * 5) / 5;
-        let room = new Room(name, 1, new Vec(parseInt(size), parseInt(size))).generate();
+        let axes = size.split(",").map(parseFloat);
+
+        let room = new Room(name, 1, new Vec(axes[0], axes[1])).generate();
+        
         scenes.editor.loadRoom(room);
         nde.setScene(scenes.editor);
       }

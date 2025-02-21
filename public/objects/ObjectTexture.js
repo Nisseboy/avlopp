@@ -8,7 +8,7 @@ class ObjectTexture extends ObjectBase {
 
   from(o) {
     super.from(o);
-    this.texture = o.texture;
+    if (o.texture) this.texture = o.texture; else this.texture = "duck/1";
 
     return this;
   }
