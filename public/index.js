@@ -11,9 +11,6 @@ let events = [];
 let settings = JSON.parse(localStorage.getItem("avloppSettings") || '{"visibilitySamples": 1000, "renderResolution": 100, "lightingEnabled": true}');
 
 
-let vecZero = new Vec(0, 0);
-
-
 
 document.body.onload = e => {
   nde = new NDE(document.getElementsByTagName("main")[0]);

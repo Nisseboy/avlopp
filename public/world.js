@@ -254,6 +254,7 @@ class World {
     for (let i in allItems) {
       totalWeightItems += allItems[i].weight;
     }
+    
     for (let i = 0; i < constants.itemAmount; i++) {
       let pos = new Vec(Math.random() * this.size.x, Math.random() * this.size.y);
       let fpos = pos._floor();
@@ -263,6 +264,7 @@ class World {
       
       let rand = Math.random() * totalWeightItems;
       let cumWeight = 0;
+      
 
       for (let i = 0; i < allItems.length; i++) {
         let item = allItems[i];
@@ -273,7 +275,9 @@ class World {
           e.pos = pos;
           e.dir = Math.random() * Math.PI * 2;
 
-          this.entities.push(e);          
+          this.entities.push(e);    
+          
+          break;
         }
       }
     }

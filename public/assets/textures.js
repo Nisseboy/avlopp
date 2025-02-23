@@ -6,6 +6,8 @@ let texturePathsEntities = [
 ];
 let texturePathsItems = [
   "item/flashlight",
+
+  "item/am6",
 ];
 let texturePathsObjects = [
   "water/1",

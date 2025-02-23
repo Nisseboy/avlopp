@@ -1,9 +1,3 @@
-let allItems = [
-  {name: "Flashlight", type: "EntityItemFlashlight", texture: "item/flashlight", size: new Vec(0.4, 0.4), value: 15, weight: 1,},
-];
-
-
-
 class EntityItem extends EntityBase {
   constructor(pos, type) {
     super(pos, type);
@@ -89,6 +83,7 @@ class EntityItemFlashlight extends EntityItemToggle {
     super.clientUpdate(dt, world);
 
     if (this.light != undefined) {
+      this.light.pos = this.pos._addV(new Vec(Math.cos(this.dir), Math.sin(this.dir)).mul(0.15));
       this.light.dir = this.dir;
       this.light.cached = false;
     }
@@ -96,7 +91,7 @@ class EntityItemFlashlight extends EntityItemToggle {
   
   addAssets(world) {    
     this.light = new LightBeam(this.pos, new Vec(16, 16), 3);
-    world.lights.push(this.light);
+    world.lights.push(this.light);    
   }
   removeAssets(world) {    
     world.lights.splice(world.lights.indexOf(this.light), 1);
@@ -105,7 +100,6 @@ class EntityItemFlashlight extends EntityItemToggle {
 }
 
 if (global) {
-  global.allItems = allItems;
   global.EntityItem = EntityItem;
   global.EntityItemToggle = EntityItemToggle;
   global.EntityItemFlashlight = EntityItemFlashlight;

@@ -7,6 +7,10 @@ let constants = {
 }
 
 
+
+let vecZero = new Vec(0, 0);
+
+
 function generateID() {
   return Math.floor(Math.random() * 1000000000);
 }
@@ -15,4 +19,5 @@ function generateID() {
 if (global) {
   global.constants = constants;
   global.generateID = generateID;
+  global.vecZero = vecZero;
 }

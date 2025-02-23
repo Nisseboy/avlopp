@@ -411,17 +411,17 @@ class SceneGame extends Scene {
     let slotSize = new Vec(1, 1);
     let slotMargin = 0.1;
     
-    renderer.set("fill", "rgba(0, 0, 0, 0.2");
+    renderer.set("fill", "rgba(255, 255, 255, 0.02");
 
     renderer.translate(cam.pos);
     renderer.translate(new Vec(-(slotSize.x * 2 + slotMargin * 1.5), cam.w / 16 * 9 / 2 - slotSize.y - slotMargin));
     for (let i = 0; i < player.slotAmount; i++) {
-      if (player.slots[i] != undefined) renderer.image(tex[this.idLookup[player.slots[i]].texture], vecZero, slotSize);
-      
       if (player.slot == i) renderer.set("stroke", "rgb(255, 50, 50)");
       else renderer.set("stroke", 200);
 
       renderer.rect(vecZero, slotSize);
+
+      if (player.slots[i] != undefined) renderer.image(tex[this.idLookup[player.slots[i]].texture], vecZero, slotSize);
 
       renderer.translate(new Vec(slotSize.x + slotMargin, 0));
     }

@@ -20,8 +20,10 @@ require("./public/objects/ObjectWater");
 require("./public/objects/ObjectTextureLight");
 
 require("./public/Room");
-
 require("./public/world");
+
+require("./public/assets/prefabs");
+
 
 
 let lobbies = {}
