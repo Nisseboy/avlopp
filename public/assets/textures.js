@@ -2,6 +2,7 @@
 let tex = {};
 let texturePathsEntities = [
   "duck/1",
+  "duck/foot",
 ];
 let texturePathsItems = [
   "item/flashlight",

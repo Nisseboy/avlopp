@@ -92,7 +92,7 @@ class SceneGame extends Scene {
       for (let i = 0; i < events.length; i++) {
         let e = events[i];
 
-        let name = (e.action + ", " + e.path);
+        let name = (e.entityId + ", " + e.action + ", " + e.path);
         indices[name] = i;
       }
 
@@ -132,7 +132,7 @@ class SceneGame extends Scene {
 
     if (nde.getKeyEqual(key,"Pick Up") && player.hoveredItem != undefined) {
       let emptySlot = undefined;
-      for (let i = 0; i < player.slotAmount; i++) {if (player.slots[i] == undefined) emptySlot = i}
+      for (let i = 0; i < player.slotAmount; i++) {if (player.slots[i] == undefined) {emptySlot = i; break; }}
       if (emptySlot == undefined) return;
       
 
@@ -161,7 +161,6 @@ class SceneGame extends Scene {
 
       let entity = this.idLookup[heldItem];
       emitEvent({action: "vec", entityId: entity.id, path: "pos", vec: entity.pos});
-      emitEvent({action: "primitive", entityId: entity.id, path: "dir", primitive: entity.dir});
       
     }
     
@@ -169,14 +168,25 @@ class SceneGame extends Scene {
       this.idLookup[heldItem].use();
       this.idLookup[heldItem].emitState();
     }
+
+    let int = parseInt(key)
+    if (!isNaN(int) && int > 0 && int <= player.slotAmount) {
+      player.slot = int - 1;
+      emitEvent({action: "update slots", slots: player.slots, slot: player.slot});
+    }
   }
   
 
   wheel(e) {
-    if (!nde.debug) return;
+    let player = this.player;
 
-    if (e.deltaY < 0) this.cam.w /= 1.2;
-    else this.cam.w *= 1.2;
+    if (nde.getKeyPressed("Run") && nde.debug) {
+      if (e.deltaY < 0) this.cam.w /= 1.2;
+      else this.cam.w *= 1.2;
+    } else {
+      player.slot = (player.slot + Math.sign(e.deltaY) + player.slotAmount) % player.slotAmount;
+      emitEvent({action: "update slots", slots: player.slots, slot: player.slot});
+    }
   }
 
   update(dt) {
@@ -219,7 +229,12 @@ class SceneGame extends Scene {
 
     let heldItem = player.slots[player.slot];
     if (heldItem != undefined) {
-      this.idLookup[heldItem].dir = Math.atan2(nde.mouse.y- nde.w / 16 * 9 / 2, nde.mouse.x - nde.w / 2);
+      let item = this.idLookup[heldItem];
+      let dir = Math.atan2(nde.mouse.y- nde.w / 16 * 9 / 2, nde.mouse.x - nde.w / 2);
+      if (item.dir != dir) {
+        emitEvent({action: "primitive", entityId: item.id, path: "dir", primitive: item.dir});
+        item.dir = dir;
+      }
     }
 
     //Move player light and cam to player
@@ -261,7 +276,6 @@ class SceneGame extends Scene {
     }
 
 
-
     nde.debugStats.pos = this.cam.pos._floor().toString();
   }
 
@@ -269,10 +283,12 @@ class SceneGame extends Scene {
     let cam = this.cam;
     let player = this.player;
 
+    //Resize visibility mask and lighting texture if needed
     cam.renderW = nde.w;
     if (this.visibilityMaskTexture.size.x != renderer.img.size.x) this.visibilityMaskTexture.resize(renderer.img.size);
     if (this.lightingTexture.size.x != renderer.img.size.x) this.lightingTexture.resize(renderer.img.size);
 
+    //Clear lighting texture
     this.lightingTexture.ctx.fillStyle = "rgb(0, 0, 0)";
     this.lightingTexture.ctx.fillRect(0, 0, this.lightingTexture.size.x, this.lightingTexture.size.y);
 
@@ -289,12 +305,14 @@ class SceneGame extends Scene {
     cam.applyTransform();
     renderer.set("lineWidth", cam.unScaleVec(new Vec(1)).x);
 
+
+    //World grid
     renderer.save();
+
     let tl = cam.pos._subV(new Vec(cam.w, cam.w / 16 * 9).mul(0.5)).floor();
     renderer.translate(tl);
     
     let v = new Vec();
-
     for (v.x = 0; v.x < cam.w + 1; v.x++) {
       for (v.y = 0; v.y < cam.w / 16 * 9 + 1; v.y++) {
         if (tl.x + v.x < 0 || tl.x + v.x >= this.world.size.x || tl.y + v.y < 0 || tl.y + v.y >= this.world.size.y) continue;
@@ -307,21 +325,22 @@ class SceneGame extends Scene {
 
 
     
-
+    //Objects
     for (let i = 0; i < this.world.objects.length; i++) {
       let o = this.world.objects[i];
 
       o.render(o.pos);
-      
     }
     
     
+
+    //Noise texture over everything
+    renderer.save();
 
     let camSize = new Vec(cam.w, cam.w / 16 * 9);
     let noiseImg = this.noiseImg;
     let pos = cam.pos._divV(camSize).floor().mulV(camSize);
 
-    renderer.save();
     renderer.translate(pos);
     renderer.image(noiseImg, camSize._div(-2), camSize);
     renderer.translate(new Vec(camSize.x, 0));
@@ -330,16 +349,19 @@ class SceneGame extends Scene {
     renderer.image(noiseImg, camSize._div(-2), camSize);
     renderer.translate(new Vec(-camSize.x, 0));
     renderer.image(noiseImg, camSize._div(-2), camSize);
+
     renderer.restore();
 
 
 
+    //Entities
     for (let i = 0; i < this.world.entities.length; i++) {
       let e = this.world.entities[i];
       e.render(e.pos);
     }
 
 
+    //Lighting
     renderer.save();
     if (settings.lightingEnabled) {
       renderer.img.ctx.globalCompositeOperation = "multiply";
@@ -365,6 +387,8 @@ class SceneGame extends Scene {
     renderer.restore();
 
 
+    //Text for picking up
+    renderer.save();
     if (player.hoveredItem) {
       let emptySlot = false;
       for (let i = 0; i < player.slotAmount; i++) if (player.slots[i] == undefined) emptySlot = true;
@@ -378,6 +402,32 @@ class SceneGame extends Scene {
       renderer.set("fill", 255);
       renderer.text(text, player.hoveredItem.pos);
     }
+    renderer.restore();
+
+
+    //Slots
+    renderer.save();
+
+    let slotSize = new Vec(1, 1);
+    let slotMargin = 0.1;
+    
+    renderer.set("fill", "rgba(0, 0, 0, 0.2");
+
+    renderer.translate(cam.pos);
+    renderer.translate(new Vec(-(slotSize.x * 2 + slotMargin * 1.5), cam.w / 16 * 9 / 2 - slotSize.y - slotMargin));
+    for (let i = 0; i < player.slotAmount; i++) {
+      if (player.slots[i] != undefined) renderer.image(tex[this.idLookup[player.slots[i]].texture], vecZero, slotSize);
+      
+      if (player.slot == i) renderer.set("stroke", "rgb(255, 50, 50)");
+      else renderer.set("stroke", 200);
+
+      renderer.rect(vecZero, slotSize);
+
+      renderer.translate(new Vec(slotSize.x + slotMargin, 0));
+    }
+
+    renderer.restore();
+
 
 
     renderer.restore();

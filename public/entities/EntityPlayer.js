@@ -7,9 +7,15 @@ class EntityPlayer extends EntityBase {
     this.size = new Vec(1, 1);
     this.speed = 4;
     this.texture = "duck/1";
+    this.footTexture = "duck/foot";
     this.slotAmount = 4;
 
     this.hoveredItem = undefined;
+
+    this.timeSinceStep = 0;
+    this.footstepTime = 0.1;
+    this.footDist = 0.6;
+    this.feet = [{pos: vecZero.copy(), offset: new Vec(0, -0.2), dir: this.dir}, {pos: vecZero.copy(), offset: new Vec(0, 0.2), dir: this.dir}];
   }
 
   doMovement(dt, world) {
@@ -27,7 +33,48 @@ class EntityPlayer extends EntityBase {
   clientUpdate(dt, world) {
     this.doMovement(dt, world);
 
+    this.updateFeet(dt);
+    
     this.hoveredItem = undefined;
+  }
+
+  updateFeet(dt) {
+    this.timeSinceStep += dt * this.speedMult;
+    if (this.timeSinceStep > this.footstepTime) {
+      let largestDist = 0;
+      let foot;
+      for (let f of this.feet) {
+        let sqd = this.pos._subV(f.pos).sqMag();
+        if (sqd > largestDist ** 2) {
+          largestDist = Math.sqrt(sqd);
+          foot = f;
+        }
+      }
+
+      if (largestDist >= this.footDist) {
+        let target = this.pos._addV(foot.offset._addV(new Vec(this.footDist, 0)).rotateZAxis(this.dir));
+        foot.pos.from(target);
+        foot.dir = this.dir;
+
+        this.timeSinceStep = 0;
+        
+      }
+    }
+  }
+
+  render(pos) {
+    for (let f of this.feet) {
+      renderer.save();
+
+      renderer.translate(f.pos);
+      renderer.rotate(f.dir);
+      renderer.translate(this.size._mul(-0.15));
+      renderer.image(tex[this.footTexture], vecZero, this.size._mul(0.3));
+
+      renderer.restore();
+    }
+
+    super.render(pos);
   }
 }
 
@@ -52,6 +99,8 @@ class EntityPlayerOther extends EntityPlayer {
       this.pos.from(this.newPos);
       this.moveTime = -1;
     }    
+
+    this.updateFeet(dt);
   }
 }
 

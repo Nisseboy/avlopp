@@ -1,5 +1,5 @@
 let allItems = [
-  {name: "Flashlight", weight: 1, type: "EntityItemFlashlight", texture: "item/flashlight", size: new Vec(0.4, 0.4)},
+  {name: "Flashlight", type: "EntityItemFlashlight", texture: "item/flashlight", size: new Vec(0.4, 0.4), value: 15, weight: 1,},
 ];
 
 
@@ -15,6 +15,7 @@ class EntityItem extends EntityBase {
     super.from(data);
 
     if (data.name) this.name = data.name; else this.name = "Unnamed";
+    if (data.value) this.value = data.value; else this.value = 0;
 
     if (data.texture) this.texture = data.texture;
     if (data.size) this.size = new Vec().from(data.size);

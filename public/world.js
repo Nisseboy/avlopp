@@ -352,7 +352,7 @@ class World {
         };
       }
 
-      if (materials[this.grid[newPosx + newPosy * this.size.x]].solid) {
+      if (materials[this.grid[newPosx + newPosy * this.size.x]].opaque) {
         return {
           length: Math.sqrt(sqd),
           hitPos: new Vec(posx, posy),
