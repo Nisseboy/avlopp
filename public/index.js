@@ -38,8 +38,10 @@ document.body.onload = e => {
     "Move Left": "a",
     "Move Right": "d",
     
+    "Pick Up": "f",
+    "Drop Item": "g",
+    "Use Item": "mouse0",
     "Run": "Shift",
-    "Interact": "f",
     "Pause": "Escape",
 
     //Editor

@@ -1,18 +1,29 @@
 
 let tex = {};
-let texturePaths = [
+let texturePathsEntities = [
   "duck/1",
-
+];
+let texturePathsItems = [
+  "item/flashlight",
+];
+let texturePathsObjects = [
   "water/1",
-
+];
+let texturePathsMaterials = [
   "material/grass/1",
-
-  "material/wall/1",
-
   "material/floor/1",
   "material/floor/drain",
 
+  "material/wall/1",
+
   "material/marker/entrance",
+];
+
+let texturePaths = [
+  ...texturePathsEntities,
+  ...texturePathsItems,
+  ...texturePathsObjects,
+  ...texturePathsMaterials,
 ];
 
 function preloadTextures() {

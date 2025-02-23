@@ -16,7 +16,7 @@ class SceneLobbyPicker extends Scene {
     };
     this.buttons = [
       new ButtonText(new Vec(50, 50), "Create Lobby", buttonStyle, {mousedown: [function () {
-        document.location.href = Math.floor(Math.random() * 100000);
+        document.location.href = generateID();
     }]}),
       new ButtonText(new Vec(50, 150), "Join Lobby", buttonStyle, {mousedown: [function () {
         let lobbyCode = prompt("Lobby code");

@@ -23,12 +23,16 @@ class SceneGame extends Scene {
   }
   loadWorld(world) {    
     this.world = world;
-    this.world.lights.push(new LightPoint(new Vec(8, 4.5), new Vec(8, 8), 0.1));
-    this.world.objects.forEach(object => {object.onLoad()});
+    //Player light
+    this.world.lights.push(new LightPoint(new Vec(8, 4.5), new Vec(8, 8), 0.3));
+
+    this.world.objects.forEach(object => {object.load(world)});
+
 
     this.player = this.world.entities.find(e=>e.id == id);
-    this.lastPlayer = cloneEntity(this.player);
+    this.player.pos.from(this.world.lights[1].pos);
 
+    //Create lookup table for all entities by id
     this.idLookup = {};
     for (let i in this.world.entities) {
       let e = this.world.entities[i];
@@ -48,6 +52,7 @@ class SceneGame extends Scene {
             delete this.idLookup[e.id];
             break;
 
+
           case "move":
             let entity = this.idLookup[e.id];
             
@@ -56,11 +61,26 @@ class SceneGame extends Scene {
             entity.moveTime = 0;
             
             break;
-          case "vec":
-            this.idLookup[e.id][e.path].from(e.vec);
+          case "update slots":
+            this.idLookup[e.id].slots = e.slots;
+            this.idLookup[e.id].slot = e.slot;
             break;
-          case "number":
-            this.idLookup[e.id][e.path] = e.number;
+
+
+
+          case "create entity":
+            this.createEntity(e.entity);      
+            break;
+
+            
+          case "vec":
+            this.idLookup[e.entityId][e.path].from(e.vec);
+            break;
+          case "primitive":
+            this.idLookup[e.entityId][e.path] = e.primitive;
+            break;
+          case "remove entity":
+            this.removeEntity(e.entityId);      
             break;
         }        
       }
@@ -76,15 +96,16 @@ class SceneGame extends Scene {
         indices[name] = i;
       }
 
+      let sendEvents = [];
       for (let name in indices) {
         let i = indices[name];
         let e = events[i];
 
-        emit("event", e);
+        sendEvents.push(e);
       }
+      if (sendEvents.length != 0) emit("event", {events: sendEvents});
 
       events.length = 0;
-      this.lastPlayer = cloneEntity(this.player);
       
     }, constants.updateInterval);
   }
@@ -94,8 +115,59 @@ class SceneGame extends Scene {
   }
 
   keydown(e) {
-    if (nde.getKeyEqual(e.key,"Pause")) {
+    this.handleInput(e.key);
+  }
+
+  mousedown(e) {
+    this.handleInput("mouse" + e.button);
+  }
+
+  handleInput(key) {
+    let player = this.player;
+    let world = this.world;
+
+    if (nde.getKeyEqual(key,"Pause")) {
       nde.transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
+    }
+
+    if (nde.getKeyEqual(key,"Pick Up") && player.hoveredItem != undefined) {
+      let emptySlot = undefined;
+      for (let i = 0; i < player.slotAmount; i++) {if (player.slots[i] == undefined) emptySlot = i}
+      if (emptySlot == undefined) return;
+      
+
+      this.removeEntity(player.hoveredItem.id);
+      emitEvent({action: "remove entity", entityId: player.hoveredItem.id});
+
+      
+      let ent = cloneEntity(player.hoveredItem);
+      ent.id = generateID();
+
+      let entity = this.createEntity(ent);
+      emitEvent({action: "create entity", entity: ent});
+
+      player.slots[emptySlot] = entity.id;
+      player.slot = emptySlot;
+
+      emitEvent({action: "update slots", slots: player.slots, slot: player.slot});
+
+      player.hoveredItem = undefined;
+    }
+    
+    let heldItem = player.slots[player.slot];
+    if (nde.getKeyEqual(key,"Drop Item") && heldItem != undefined) {
+      player.slots[player.slot] = undefined;
+      emitEvent({action: "update slots", slots: player.slots, slot: player.slot});
+
+      let entity = this.idLookup[heldItem];
+      emitEvent({action: "vec", entityId: entity.id, path: "pos", vec: entity.pos});
+      emitEvent({action: "primitive", entityId: entity.id, path: "dir", primitive: entity.dir});
+      
+    }
+    
+    if (nde.getKeyEqual(key,"Use Item") && heldItem != undefined) {
+      this.idLookup[heldItem].use();
+      this.idLookup[heldItem].emitState();
     }
   }
   
@@ -109,7 +181,6 @@ class SceneGame extends Scene {
 
   update(dt) {
     let player = this.player;
-    //this.cam.pos = this.car.pos.copy();
     
     player.movement = new Vec(
       nde.getKeyPressed("Move Right") - nde.getKeyPressed("Move Left"),
@@ -118,29 +189,86 @@ class SceneGame extends Scene {
     player.speedMult = nde.getKeyPressed("Run") ? 2 : 1;
 
 
+    //Update all the entities
+    let entityGrid = [];
     for (let i = 0; i < this.world.entities.length; i++) {
       let e = this.world.entities[i];
-      e.update(dt);
+      e.clientUpdate(dt, this.world);
+
+
+      if (e instanceof EntityPlayer) {
+        for (let i = 0; i < e.slotAmount; i++) {
+          if (e.slots[i] == undefined) continue;
+          let item = this.idLookup[e.slots[i]];
+
+          if (i != e.slot) {item.pos.x = 1000; item.pos.y = 1000}
+          else {
+            let angle = e.dir + 0.7;
+            let dist = 0.46;
+            item.pos.from(e.pos).addV(new Vec(Math.cos(angle), Math.sin(angle)).mul(dist));
+          }
+        }
+      }
+
+
+      //Create entity grid
+      let index = Math.floor(e.pos.x) + Math.floor(e.pos.y) * this.world.size.x;
+      if (entityGrid[index] == undefined) entityGrid[index] = [];
+      entityGrid[index].push(e.id);
     }    
+
+    let heldItem = player.slots[player.slot];
+    if (heldItem != undefined) {
+      this.idLookup[heldItem].dir = Math.atan2(nde.mouse.y- nde.w / 16 * 9 / 2, nde.mouse.x - nde.w / 2);
+    }
+
+    //Move player light and cam to player
+    this.cam.pos.from(this.player.pos);
     this.world.lights[0].pos.from(player.pos);
     this.world.lights[0].cached = false;
-    
-    //this.cam.pos.addV(this.player.pos._subV(this.cam.pos).mul(dt * 1));
-    this.cam.pos.from(this.player.pos);
 
-    
-    if (player.pos._subV(this.lastPlayer.pos).sqMag() > 0.0001) {      
-      emitEvent({action: "move", pos: player.pos});
+
+    //Find closest item to player;
+    let closestSqDist = Infinity;
+    for (let x = -1; x < 2; x++) {
+      for (let y = -1; y < 2; y++) {
+        let entities = entityGrid[Math.floor(player.pos.x + x) + Math.floor(player.pos.y + y) * this.world.size.x];
+        if (!entities) continue;
+
+        for (let eid of entities) {
+          if (eid == player.id) continue;
+
+          let e = this.idLookup[eid];
+
+          if(!(e instanceof EntityItem)) continue;
+
+          let held = false;
+          for (let p of this.world.entities) {
+            for (let i = 0; i < p.slotAmount; i++) {
+              if (p.slots[i] == eid) held = true;
+            }
+          }
+          if (held) continue;
+          
+          let sqd = e.pos._subV(player.pos).sqMag();
+
+          if (sqd < closestSqDist) {
+            closestSqDist = sqd;
+            player.hoveredItem = e;
+          }
+        }
+      }
     }
-    if (Math.abs(player.dir - this.lastPlayer.dir) > 0.0001) {
-      emitEvent({action: "number", path: "dir", number: this.player.dir});
-    }
+
+
 
     nde.debugStats.pos = this.cam.pos._floor().toString();
   }
 
   render() {
     let cam = this.cam;
+    let player = this.player;
+
     cam.renderW = nde.w;
     if (this.visibilityMaskTexture.size.x != renderer.img.size.x) this.visibilityMaskTexture.resize(renderer.img.size);
     if (this.lightingTexture.size.x != renderer.img.size.x) this.lightingTexture.resize(renderer.img.size);
@@ -212,21 +340,66 @@ class SceneGame extends Scene {
     }
 
 
+    renderer.save();
     if (settings.lightingEnabled) {
       renderer.img.ctx.globalCompositeOperation = "multiply";
+      let renderedLights = 0;
       for (let i = 0; i < this.world.lights.length; i++) {
         let l = this.world.lights[i];
-  
+        
+        let sqd = l.pos._subV(cam.pos).sqMag();
+        if (sqd > (Math.max(l.size.x, l.size.y) / 2 + cam.w / 2) ** 2) continue;
+
         l.render(l.pos, this.lightingTexture);
+        renderedLights++;
       }
       renderer.image(this.lightingTexture, cam.pos._subV(camSize._div(2)), camSize);
+
+      //console.log(`${renderedLights} Lights renderered this frame`);
+      
   
   
-      createVisibilityMask(this.visibilityMaskTexture, cam.pos);
+      createVisibilityMask(this.visibilityMaskTexture, cam.pos, cam.w *0.6);
       renderer.image(this.visibilityMaskTexture, cam.pos._subV(camSize._div(2)), camSize);
+    }
+    renderer.restore();
+
+
+    if (player.hoveredItem) {
+      let emptySlot = false;
+      for (let i = 0; i < player.slotAmount; i++) if (player.slots[i] == undefined) emptySlot = true;
+
+      let text;
+      if (emptySlot) text = `[${nde.getKeyCode("Pick Up")}] ${player.hoveredItem.name}`;
+      else text = `[${nde.getKeyCode("Drop Item")}] to drop item`;
+
+      renderer.set("font", "0.2px monospace");
+      renderer.set("textAlign", ["left", "middle"]);
+      renderer.set("fill", 255);
+      renderer.text(text, player.hoveredItem.pos);
     }
 
 
     renderer.restore();
+  }
+
+  removeEntity(id) {
+    let entity = this.idLookup[id];
+    if (!entity) return false;
+
+    entity.unload(this.world);
+
+    this.world.entities.splice(this.world.entities.indexOf(entity), 1);
+    delete this.idLookup[id];
+
+    return true;
+  }
+  createEntity(entity) {
+    let e = cloneEntity(entity);
+
+    this.world.entities.push(e);
+    this.idLookup[e.id] = e;
+
+    return e;
   }
 }

@@ -40,7 +40,7 @@ class World {
   }
 
   random() {
-    this.size = new Vec(11*5, 11*5);
+    this.size = new Vec(constants.worldSize*5, constants.worldSize*5);
     
     this.grid = new Array(this.size.x * this.size.y).fill(0).map(e=>{return Math.floor(Math.random() * 2.2)});
     this.entities = [];
@@ -250,6 +250,35 @@ class World {
 
     console.log(str);*/
 
+    let totalWeightItems = 0;
+    for (let i in allItems) {
+      totalWeightItems += allItems[i].weight;
+    }
+    for (let i = 0; i < constants.itemAmount; i++) {
+      let pos = new Vec(Math.random() * this.size.x, Math.random() * this.size.y);
+      let fpos = pos._floor();
+
+      if (materials[this.grid[fpos.x + fpos.y * this.size.x]].solid) {i--; continue;}
+
+      
+      let rand = Math.random() * totalWeightItems;
+      let cumWeight = 0;
+
+      for (let i = 0; i < allItems.length; i++) {
+        let item = allItems[i];
+        cumWeight += item.weight;
+        
+        if (cumWeight > rand) { 
+          let e = cloneEntity(item);
+          e.pos = pos;
+          e.dir = Math.random() * Math.PI * 2;
+
+          this.entities.push(e);          
+        }
+      }
+    }
+
+
     return this;
   }
 
@@ -316,8 +345,8 @@ class World {
 
       if (newPosx < 0 || newPosx >= sizex || newPosy < 0 || newPosy >= sizey || sqd > maxLength ** 2) {
         return {
-          length: Math.sqrt(sqd),
-          hitPos: new Vec(posx, posy),
+          length: maxLength,
+          hitPos: new Vec(startPosx + dirx * maxLength, startPosy + diry * maxLength),
           blockPos: new Vec(newPosx, newPosy),
           hit: false,
         };

@@ -11,6 +11,7 @@ require("./public/constants");
 
 require("./public/entities/EntityBase");
 require("./public/entities/EntityPlayer");
+require("./public/entities//EntityItem");
 
 require("./public/objects/ObjectBase");
 require("./public/objects/ObjectText");
@@ -75,22 +76,47 @@ io.on("connection", (socket) => {
     console.log(`${lobby.lobbyId}: ${player.id} Disconnected`);
   });
 
-  socket.on('event', data => {
+  socket.on('event', dataAll => {
     if (!lobby || !player) return;
 
-    switch(data.action) {
-      case "move":
-        lobby.world.entities.find(elem=>elem.id == data.id).pos = data.pos;
-        break;
-      case "vec":
-        lobby.world.entities.find(elem=>elem.id == data.id)[data.path] = data.vec;
-        break;
-      case "number":
-        lobby.world.entities.find(elem=>elem.id == data.id)[data.path] = data.number;
-        break;
-    }
+    let world = lobby.world;
 
-    emitOthers(data);
+    for (let data of dataAll.events) {
+      
+    
+      switch(data.action) {
+        case "move":
+          player.pos = data.pos;
+          break;
+        case "update slots":
+          player.slots = data.slots;
+          player.slot = data.slot;
+          break;
+
+        case "create entity":
+          let e = cloneEntity(data.entity);
+      
+          world.entities.push(e);
+          break;
+
+
+        case "vec":
+          world.entities.find(e => e.id == data.entityId)[data.path] = data.vec;
+          break;
+        case "primitive":
+          world.entities.find(e => e.id == data.entityId)[data.path] = data.primitive;
+          break;
+        case "remove entity":
+          let index = world.entities.findIndex(e=>e.id==data.entityId);
+          if (index == -1) continue;
+
+          world.entities.splice(index, 1);
+          break;
+      }
+      
+      data.id = dataAll.id;
+      emitOthers(data);
+    }
   });
 
   function emitOthers( data) {

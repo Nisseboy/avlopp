@@ -18,13 +18,11 @@ class ObjectTextureLight extends ObjectTexture {
   }
   
 
-  onLoad() {
-    let world = scenes.game.world;
-
+  load(world) {
     this.light = new LightPoint(this.pos, this.lightSize, this.lightStrength);
     world.lights.push(this.light);
   }
-  onUnload() {
+  unload(world) {
     world.lights.splice(world.lights.indexOf(this.light), 1);
   }
 }
