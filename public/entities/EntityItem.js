@@ -42,14 +42,14 @@ class EntityItemToggle extends EntityItem {
     return this;
   }
 
-  clientUpdate(dt, world) {
-    super.clientUpdate(dt, world);
+  clientUpdate(dt) {
+    super.clientUpdate(dt);
 
     if (this.on && !this.lastOn) {
-      this.addAssets(world);
+      this.addAssets();
     }
     if (this.lastOn && !this.on) {
-      this.removeAssets(world);
+      this.removeAssets();
     }
 
     this.lastOn = this.on;
@@ -59,8 +59,8 @@ class EntityItemToggle extends EntityItem {
     this.on = !this.on;
   }
 
-  unload(world) {    
-    if (this.on) this.removeAssets(world);
+  unload() {    
+    if (this.on) this.removeAssets();
   }
 
   emitState() {
@@ -68,8 +68,8 @@ class EntityItemToggle extends EntityItem {
   }
 
 
-  addAssets(world) {}
-  removeAssets(world) {}
+  addAssets() {}
+  removeAssets() {}
 }
 
 class EntityItemFlashlight extends EntityItemToggle {
@@ -79,8 +79,8 @@ class EntityItemFlashlight extends EntityItemToggle {
     this.light = undefined;
   }
 
-  clientUpdate(dt, world) {
-    super.clientUpdate(dt, world);
+  clientUpdate(dt) {
+    super.clientUpdate(dt);
 
     if (this.light != undefined) {
       this.light.pos = this.pos._addV(new Vec(Math.cos(this.dir), Math.sin(this.dir)).mul(0.15));
@@ -89,11 +89,11 @@ class EntityItemFlashlight extends EntityItemToggle {
     }
   }
   
-  addAssets(world) {    
+  addAssets() {    
     this.light = new LightBeam(this.pos, new Vec(16, 16), 3);
     world.lights.push(this.light);    
   }
-  removeAssets(world) {    
+  removeAssets() {    
     world.lights.splice(world.lights.indexOf(this.light), 1);
     this.light = undefined;
   }

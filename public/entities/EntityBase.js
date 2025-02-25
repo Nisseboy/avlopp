@@ -20,7 +20,7 @@ class EntityBase {
     this.id = generateID();
   }
 
-  doMovement(dt, world) {
+  doMovement(dt) {
     if (this.movement.sqMag() < 0.01) return false;
 
 
@@ -45,16 +45,16 @@ class EntityBase {
     return delta.x != 0 || delta.y != 0;
   }
 
-  checkSolid(pos, world) {
+  checkSolid(pos) {
     if (pos.x < 0 || pos.y < 0 || pos.x >= world.size.x || pos.y >= world.size.y) return true;
 
     return materials[world.grid[pos.x + pos.y * world.size.x]].solid;
   }
 
-  serverUpdate(dt, world) {
-    this.doMovement(dt, world);
+  serverUpdate(dt) {
+    this.doMovement(dt);
   }
-  clientUpdate(dt, world) {
+  clientUpdate(dt) {
 
   }
 

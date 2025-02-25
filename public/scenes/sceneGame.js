@@ -21,21 +21,22 @@ class SceneGame extends Scene {
     this.visibilityMaskTexture = new Img(renderer.img.size);
     this.lightingTexture = new Img(renderer.img.size);
   }
-  loadWorld(world) {    
-    this.world = world;
+  loadWorld(w) {
+    world = w;
+    
     //Player light
-    this.world.lights.push(new LightPoint(new Vec(8, 4.5), new Vec(8, 8), 0.3));
+    world.lights.push(new LightPoint(new Vec(8, 4.5), new Vec(8, 8), 0.3));
 
-    this.world.objects.forEach(object => {object.load(world)});
+    world.objects.forEach(object => {object.load()});
 
 
-    this.player = this.world.entities.find(e=>e.id == id);
-    this.player.pos.from(this.world.lights[1].pos);
+    this.player = world.entities.find(e=>e.id == id);
+    this.player.pos.from(world.lights[1].pos);
 
     //Create lookup table for all entities by id
     this.idLookup = {};
-    for (let i in this.world.entities) {
-      let e = this.world.entities[i];
+    for (let i in world.entities) {
+      let e = world.entities[i];
       this.idLookup[e.id] = e;
     }
 
@@ -44,11 +45,11 @@ class SceneGame extends Scene {
         switch (e.action) {
           case "connect":
             let newPlayer = cloneEntity(e.player, EntityPlayerOther);
-            this.world.entities.push(newPlayer);
+            world.entities.push(newPlayer);
             this.idLookup[e.id] = newPlayer;
             break;
           case "disconnect":
-            this.world.entities.splice(this.world.entities.findIndex(elem=>elem.id == e.id), 1);
+            world.entities.splice(world.entities.findIndex(elem=>elem.id == e.id), 1);
             delete this.idLookup[e.id];
             break;
 
@@ -124,7 +125,6 @@ class SceneGame extends Scene {
 
   handleInput(key) {
     let player = this.player;
-    let world = this.world;
 
     if (nde.getKeyEqual(key,"Pause")) {
       nde.transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
@@ -201,9 +201,9 @@ class SceneGame extends Scene {
 
     //Update all the entities
     let entityGrid = [];
-    for (let i = 0; i < this.world.entities.length; i++) {
-      let e = this.world.entities[i];
-      e.clientUpdate(dt, this.world);
+    for (let i = 0; i < world.entities.length; i++) {
+      let e = world.entities[i];
+      e.clientUpdate(dt);
 
 
       if (e instanceof EntityPlayer) {
@@ -222,7 +222,7 @@ class SceneGame extends Scene {
 
 
       //Create entity grid
-      let index = Math.floor(e.pos.x) + Math.floor(e.pos.y) * this.world.size.x;
+      let index = Math.floor(e.pos.x) + Math.floor(e.pos.y) * world.size.x;
       if (entityGrid[index] == undefined) entityGrid[index] = [];
       entityGrid[index].push(e.id);
     }    
@@ -239,15 +239,15 @@ class SceneGame extends Scene {
 
     //Move player light and cam to player
     this.cam.pos.from(this.player.pos);
-    this.world.lights[0].pos.from(player.pos);
-    this.world.lights[0].cached = false;
+    world.lights[0].pos.from(player.pos);
+    world.lights[0].cached = false;
 
 
     //Find closest item to player;
     let closestSqDist = Infinity;
     for (let x = -1; x < 2; x++) {
       for (let y = -1; y < 2; y++) {
-        let entities = entityGrid[Math.floor(player.pos.x + x) + Math.floor(player.pos.y + y) * this.world.size.x];
+        let entities = entityGrid[Math.floor(player.pos.x + x) + Math.floor(player.pos.y + y) * world.size.x];
         if (!entities) continue;
 
         for (let eid of entities) {
@@ -258,7 +258,7 @@ class SceneGame extends Scene {
           if(!(e instanceof EntityItem)) continue;
 
           let held = false;
-          for (let p of this.world.entities) {
+          for (let p of world.entities) {
             for (let i = 0; i < p.slotAmount; i++) {
               if (p.slots[i] == eid) held = true;
             }
@@ -315,9 +315,9 @@ class SceneGame extends Scene {
     let v = new Vec();
     for (v.x = 0; v.x < cam.w + 1; v.x++) {
       for (v.y = 0; v.y < cam.w / 16 * 9 + 1; v.y++) {
-        if (tl.x + v.x < 0 || tl.x + v.x >= this.world.size.x || tl.y + v.y < 0 || tl.y + v.y >= this.world.size.y) continue;
+        if (tl.x + v.x < 0 || tl.x + v.x >= world.size.x || tl.y + v.y < 0 || tl.y + v.y >= world.size.y) continue;
 
-        materials[this.world.grid[tl.x + v.x + (tl.y + v.y) * this.world.size.x]].render(v);
+        materials[world.grid[tl.x + v.x + (tl.y + v.y) * world.size.x]].render(v);
       }
     }
     
@@ -326,8 +326,8 @@ class SceneGame extends Scene {
 
     
     //Objects
-    for (let i = 0; i < this.world.objects.length; i++) {
-      let o = this.world.objects[i];
+    for (let i = 0; i < world.objects.length; i++) {
+      let o = world.objects[i];
 
       o.render(o.pos);
     }
@@ -355,8 +355,8 @@ class SceneGame extends Scene {
 
 
     //Entities
-    for (let i = 0; i < this.world.entities.length; i++) {
-      let e = this.world.entities[i];
+    for (let i = 0; i < world.entities.length; i++) {
+      let e = world.entities[i];
       e.render(e.pos);
     }
 
@@ -366,8 +366,8 @@ class SceneGame extends Scene {
     if (settings.lightingEnabled) {
       renderer.img.ctx.globalCompositeOperation = "multiply";
       let renderedLights = 0;
-      for (let i = 0; i < this.world.lights.length; i++) {
-        let l = this.world.lights[i];
+      for (let i = 0; i < world.lights.length; i++) {
+        let l = world.lights[i];
         
         let sqd = l.pos._subV(cam.pos).sqMag();
         if (sqd > (Math.max(l.size.x, l.size.y) / 2 + cam.w / 2) ** 2) continue;
@@ -437,9 +437,9 @@ class SceneGame extends Scene {
     let entity = this.idLookup[id];
     if (!entity) return false;
 
-    entity.unload(this.world);
+    entity.unload();
 
-    this.world.entities.splice(this.world.entities.indexOf(entity), 1);
+    world.entities.splice(world.entities.indexOf(entity), 1);
     delete this.idLookup[id];
 
     return true;
@@ -447,8 +447,10 @@ class SceneGame extends Scene {
   createEntity(entity) {
     let e = cloneEntity(entity);
 
-    this.world.entities.push(e);
+    world.entities.push(e);
     this.idLookup[e.id] = e;
+
+    e.load();
 
     return e;
   }

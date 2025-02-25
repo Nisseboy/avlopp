@@ -21,10 +21,10 @@ class ObjectBase {
   
   render(pos) {}
 
-  load(world) {
+  load() {
 
   }
-  unload(world) {
+  unload() {
 
   }
 }

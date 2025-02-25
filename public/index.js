@@ -3,8 +3,10 @@ let scenes;
 let renderer;
 
 let lobby;
-let id;
 let socket;
+
+let world;
+let id;
 
 let events = [];
 

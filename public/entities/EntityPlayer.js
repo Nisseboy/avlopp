@@ -18,8 +18,8 @@ class EntityPlayer extends EntityBase {
     this.feet = [{pos: vecZero.copy(), offset: new Vec(0, -0.2), dir: this.dir}, {pos: vecZero.copy(), offset: new Vec(0, 0.2), dir: this.dir}];
   }
 
-  doMovement(dt, world) {
-    let moved = super.doMovement(dt, world);
+  doMovement(dt) {
+    let moved = super.doMovement(dt);
 
     if (moved) {
       emitEvent({action: "move", pos: this.pos});
@@ -27,11 +27,11 @@ class EntityPlayer extends EntityBase {
     }
   }
 
-  serverUpdate(dt, world) {
+  serverUpdate(dt) {
 
   }
-  clientUpdate(dt, world) {
-    this.doMovement(dt, world);
+  clientUpdate(dt) {
+    this.doMovement(dt);
 
     this.updateFeet(dt);
     
@@ -88,10 +88,10 @@ class EntityPlayerOther extends EntityPlayer {
     this.moveTime = 1;
   }
 
-  serverUpdate(dt, world) {
+  serverUpdate(dt) {
     
   }
-  clientUpdate(dt, world) {
+  clientUpdate(dt) {
     if (this.moveTime < 1 && this.moveTime >= 0) {
       this.moveTime += dt / constants.updateInterval * 1000;
       this.pos = this.newPos._subV(this.diffPos._mul(1-this.moveTime));
