@@ -6,6 +6,7 @@ let lobby;
 let socket;
 
 let world;
+let player;
 let id;
 
 let events = [];

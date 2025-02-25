@@ -30,8 +30,8 @@ class SceneGame extends Scene {
     world.objects.forEach(object => {object.load()});
 
 
-    this.player = world.entities.find(e=>e.id == id);
-    this.player.pos.from(world.lights[1].pos);
+    player = world.entities.find(e=>e.id == id);
+    player.pos.from(world.lights[1].pos);
 
     //Create lookup table for all entities by id
     this.idLookup = {};
@@ -124,8 +124,6 @@ class SceneGame extends Scene {
   }
 
   handleInput(key) {
-    let player = this.player;
-
     if (nde.getKeyEqual(key,"Pause")) {
       nde.transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
     }
@@ -178,8 +176,6 @@ class SceneGame extends Scene {
   
 
   wheel(e) {
-    let player = this.player;
-
     if (nde.getKeyPressed("Run") && nde.debug) {
       if (e.deltaY < 0) this.cam.w /= 1.2;
       else this.cam.w *= 1.2;
@@ -189,9 +185,7 @@ class SceneGame extends Scene {
     }
   }
 
-  update(dt) {
-    let player = this.player;
-    
+  update(dt) {    
     player.movement = new Vec(
       nde.getKeyPressed("Move Right") - nde.getKeyPressed("Move Left"),
       nde.getKeyPressed("Move Down") - nde.getKeyPressed("Move Up"),
@@ -238,7 +232,7 @@ class SceneGame extends Scene {
     }
 
     //Move player light and cam to player
-    this.cam.pos.from(this.player.pos);
+    this.cam.pos.from(player.pos);
     world.lights[0].pos.from(player.pos);
     world.lights[0].cached = false;
 
@@ -281,7 +275,6 @@ class SceneGame extends Scene {
 
   render() {
     let cam = this.cam;
-    let player = this.player;
 
     //Resize visibility mask and lighting texture if needed
     cam.renderW = nde.w;
