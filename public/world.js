@@ -252,7 +252,7 @@ class World {
 
     let totalWeightItems = 0;
     for (let i in allItems) {
-      totalWeightItems += allItems[i].weight;
+      totalWeightItems += allItems[i].worldWeight;
     }
     
     for (let i = 0; i < constants.itemAmount; i++) {
@@ -268,7 +268,7 @@ class World {
 
       for (let i = 0; i < allItems.length; i++) {
         let item = allItems[i];
-        cumWeight += item.weight;
+        cumWeight += item.worldWeight;
         
         if (cumWeight > rand) { 
           let e = cloneEntity(item);

@@ -9,6 +9,8 @@ class EntityPlayer extends EntityBase {
     this.texture = "duck/1";
     this.footTexture = "duck/foot";
     this.slotAmount = 4;
+    
+    this.hardHoldWeight = 10;
 
     this.hoveredItem = undefined;
 
@@ -38,6 +40,21 @@ class EntityPlayer extends EntityBase {
     this.hoveredItem = undefined;
   }
 
+  render(pos) {
+    for (let f of this.feet) {
+      renderer.save();
+
+      renderer.translate(f.pos);
+      renderer.rotate(f.dir);
+      renderer.translate(this.size._mul(-0.15));
+      renderer.image(tex[this.footTexture], vecZero, this.size._mul(0.3));
+
+      renderer.restore();
+    }
+
+    super.render(pos);
+  }
+
   updateFeet(dt) {
     this.timeSinceStep += dt * this.speedMult;
     if (this.timeSinceStep > this.footstepTime) {
@@ -60,21 +77,6 @@ class EntityPlayer extends EntityBase {
         
       }
     }
-  }
-
-  render(pos) {
-    for (let f of this.feet) {
-      renderer.save();
-
-      renderer.translate(f.pos);
-      renderer.rotate(f.dir);
-      renderer.translate(this.size._mul(-0.15));
-      renderer.image(tex[this.footTexture], vecZero, this.size._mul(0.3));
-
-      renderer.restore();
-    }
-
-    super.render(pos);
   }
 }
 

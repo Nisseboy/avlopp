@@ -6,8 +6,8 @@ let allRooms = [
 ];
 
 let allItems = [
-  {name: "Flashlight", type: "EntityItemFlashlight", texture: "item/flashlight", size: new Vec(0.4, 0.4), value: 15, weight: 1,},
-  {name: "AM6 Engine", type: "EntityItem", texture: "item/am6", size: new Vec(1, 1), value: 48, weight: 1,},
+  {name: "Flashlight", type: "EntityItemFlashlight",  texture: "item/flashlight", size: new Vec(0.4, 0.4),  value: 15, weight: 0.5, worldWeight: 1,},
+  {name: "AM6 Engine", type: "EntityItem",            texture: "item/am6",        size: new Vec(1, 1),      value: 48, weight: 15,  worldWeight: 1,},
 ];
 
 

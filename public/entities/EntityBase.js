@@ -81,6 +81,15 @@ class EntityBase {
 
     return this;
   }
+
+  getHeldItem() {
+    if (this.slotAmount == 0) return undefined;
+
+    let held = this.slots[this.slot];
+    if (held == undefined) return undefined;
+
+    return idLookup[held];
+  }
 }
 
 

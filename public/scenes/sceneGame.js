@@ -34,10 +34,10 @@ class SceneGame extends Scene {
     player.pos.from(world.lights[1].pos);
 
     //Create lookup table for all entities by id
-    this.idLookup = {};
+    idLookup = {};
     for (let i in world.entities) {
       let e = world.entities[i];
-      this.idLookup[e.id] = e;
+      idLookup[e.id] = e;
     }
 
     socket.on("update", data => {
@@ -46,16 +46,16 @@ class SceneGame extends Scene {
           case "connect":
             let newPlayer = cloneEntity(e.player, EntityPlayerOther);
             world.entities.push(newPlayer);
-            this.idLookup[e.id] = newPlayer;
+            idLookup[e.id] = newPlayer;
             break;
           case "disconnect":
             world.entities.splice(world.entities.findIndex(elem=>elem.id == e.id), 1);
-            delete this.idLookup[e.id];
+            delete idLookup[e.id];
             break;
 
 
           case "move":
-            let entity = this.idLookup[e.id];
+            let entity = idLookup[e.id];
             
             entity.newPos.from(e.pos);
             entity.diffPos = entity.newPos._subV(entity.pos);
@@ -63,8 +63,8 @@ class SceneGame extends Scene {
             
             break;
           case "update slots":
-            this.idLookup[e.id].slots = e.slots;
-            this.idLookup[e.id].slot = e.slot;
+            idLookup[e.id].slots = e.slots;
+            idLookup[e.id].slot = e.slot;
             break;
 
 
@@ -75,10 +75,10 @@ class SceneGame extends Scene {
 
             
           case "vec":
-            this.idLookup[e.entityId][e.path].from(e.vec);
+            idLookup[e.entityId][e.path].from(e.vec);
             break;
           case "primitive":
-            this.idLookup[e.entityId][e.path] = e.primitive;
+            idLookup[e.entityId][e.path] = e.primitive;
             break;
           case "remove entity":
             this.removeEntity(e.entityId);      
@@ -129,8 +129,16 @@ class SceneGame extends Scene {
     }
 
     if (nde.getKeyEqual(key,"Pick Up") && player.hoveredItem != undefined) {
+      if (player.getHeldItem()?.weight >= player.hardHoldWeight) return;
+
       let emptySlot = undefined;
-      for (let i = 0; i < player.slotAmount; i++) {if (player.slots[i] == undefined) {emptySlot = i; break; }}
+      for (let i = 0; i < player.slotAmount; i++) {
+        let j = (i + player.slot) % player.slotAmount;
+        
+        if (player.slots[j] == undefined) {
+          emptySlot = j; break; 
+        }
+      }
       if (emptySlot == undefined) return;
       
 
@@ -157,14 +165,14 @@ class SceneGame extends Scene {
       player.slots[player.slot] = undefined;
       emitEvent({action: "update slots", slots: player.slots, slot: player.slot});
 
-      let entity = this.idLookup[heldItem];
+      let entity = idLookup[heldItem];
       emitEvent({action: "vec", entityId: entity.id, path: "pos", vec: entity.pos});
       
     }
     
     if (nde.getKeyEqual(key,"Use Item") && heldItem != undefined) {
-      this.idLookup[heldItem].use();
-      this.idLookup[heldItem].emitState();
+      idLookup[heldItem].use();
+      idLookup[heldItem].emitState();
     }
 
     let int = parseInt(key)
@@ -180,6 +188,7 @@ class SceneGame extends Scene {
       if (e.deltaY < 0) this.cam.w /= 1.2;
       else this.cam.w *= 1.2;
     } else {
+      if (player.getHeldItem()?.weight >= player.hardHoldWeight) return;
       player.slot = (player.slot + Math.sign(e.deltaY) + player.slotAmount) % player.slotAmount;
       emitEvent({action: "update slots", slots: player.slots, slot: player.slot});
     }
@@ -203,7 +212,7 @@ class SceneGame extends Scene {
       if (e instanceof EntityPlayer) {
         for (let i = 0; i < e.slotAmount; i++) {
           if (e.slots[i] == undefined) continue;
-          let item = this.idLookup[e.slots[i]];
+          let item = idLookup[e.slots[i]];
 
           if (i != e.slot) {item.pos.x = 1000; item.pos.y = 1000}
           else {
@@ -223,7 +232,7 @@ class SceneGame extends Scene {
 
     let heldItem = player.slots[player.slot];
     if (heldItem != undefined) {
-      let item = this.idLookup[heldItem];
+      let item = idLookup[heldItem];
       let dir = Math.atan2(nde.mouse.y- nde.w / 16 * 9 / 2, nde.mouse.x - nde.w / 2);
       if (item.dir != dir) {
         emitEvent({action: "primitive", entityId: item.id, path: "dir", primitive: item.dir});
@@ -247,7 +256,7 @@ class SceneGame extends Scene {
         for (let eid of entities) {
           if (eid == player.id) continue;
 
-          let e = this.idLookup[eid];
+          let e = idLookup[eid];
 
           if(!(e instanceof EntityItem)) continue;
 
@@ -409,12 +418,14 @@ class SceneGame extends Scene {
     renderer.translate(cam.pos);
     renderer.translate(new Vec(-(slotSize.x * 2 + slotMargin * 1.5), cam.w / 16 * 9 / 2 - slotSize.y - slotMargin));
     for (let i = 0; i < player.slotAmount; i++) {
-      if (player.slot == i) renderer.set("stroke", "rgb(255, 50, 50)");
+      if (player.getHeldItem()?.weight >= player.hardHoldWeight) renderer.set("stroke", 50);
       else renderer.set("stroke", 200);
+
+      if (player.slot == i) renderer.set("stroke", "rgb(255, 50, 50)");
 
       renderer.rect(vecZero, slotSize);
 
-      if (player.slots[i] != undefined) renderer.image(tex[this.idLookup[player.slots[i]].texture], vecZero, slotSize);
+      if (player.slots[i] != undefined) renderer.image(tex[idLookup[player.slots[i]].texture], vecZero, slotSize);
 
       renderer.translate(new Vec(slotSize.x + slotMargin, 0));
     }
@@ -427,13 +438,13 @@ class SceneGame extends Scene {
   }
 
   removeEntity(id) {
-    let entity = this.idLookup[id];
+    let entity = idLookup[id];
     if (!entity) return false;
 
     entity.unload();
 
     world.entities.splice(world.entities.indexOf(entity), 1);
-    delete this.idLookup[id];
+    delete idLookup[id];
 
     return true;
   }
@@ -441,7 +452,7 @@ class SceneGame extends Scene {
     let e = cloneEntity(entity);
 
     world.entities.push(e);
-    this.idLookup[e.id] = e;
+    idLookup[e.id] = e;
 
     e.load();
 

@@ -3,13 +3,16 @@ class EntityItem extends EntityBase {
     super(pos, type);
 
     this.name = "Unnamed";
+    this.weight = 1;
+    this.value = 1;
   }
 
   from(data) {
     super.from(data);
 
-    if (data.name) this.name = data.name; else this.name = "Unnamed";
-    if (data.value) this.value = data.value; else this.value = 0;
+    if (data.name) this.name = data.name;
+    if (data.value) this.weight = data.weight;
+    if (data.value) this.value = data.value;
 
     if (data.texture) this.texture = data.texture;
     if (data.size) this.size = new Vec().from(data.size);
