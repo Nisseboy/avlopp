@@ -171,7 +171,7 @@ function createVisibilityMask(visibilityMaskTexture, pos, maxLength = 10000, tra
   img.ctx.lineWidth = 0.3;
   img.ctx.beginPath();
   for (let i = 0; i < settings.visibilitySamples; i++) {
-    let hitInfo = world.raycast(pos, i / settings.visibilitySamples * Math.PI * 2, maxLength);
+    let hitInfo = world.raycast(pos, i / settings.visibilitySamples * Math.PI * 2, true, false, maxLength);
 
     img.ctx.lineTo(hitInfo.hitPos.x, hitInfo.hitPos.y);
 

@@ -28,12 +28,12 @@ class EntityBase {
 
     let hitInfo;
 
-    hitInfo = world.raycast(this.pos, Math.PI * (1 - Math.sign(delta.x)) / 2, delta.x);
+    hitInfo = world.raycast(this.pos, Math.PI * (1 - Math.sign(delta.x)) / 2, false, true, delta.x);
     if (hitInfo.hit) delta.x = (hitInfo.length - 0.005) * Math.sign(delta.x);
     if (Math.abs(delta.x) < 0.01) delta.x = 0;
     this.pos.x += delta.x;
   
-    hitInfo = world.raycast(this.pos, Math.PI * Math.sign(delta.y) / 2, delta.y);
+    hitInfo = world.raycast(this.pos, Math.PI * Math.sign(delta.y) / 2, false, true, delta.y);
     if (hitInfo.hit) delta.y = (hitInfo.length - 0.005) * Math.sign(delta.y);
     if (Math.abs(delta.y) < 0.01) delta.y = 0;
     this.pos.y += delta.y;

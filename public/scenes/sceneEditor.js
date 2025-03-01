@@ -170,21 +170,17 @@ class SceneEditor extends Scene {
     cam.applyTransform();
     renderer.set("lineWidth", cam.unScaleVec(new Vec(1)).x);
 
-    renderer.save();
+    
     let tl = cam.pos._subV(new Vec(cam.w, cam.w / 16 * 9).mul(0.5)).floor();
-    renderer.translate(tl);
     
     let v = new Vec();
-
     for (v.x = 0; v.x < cam.w + 1; v.x++) {
       for (v.y = 0; v.y < cam.w / 16 * 9 + 1; v.y++) {
         if (tl.x + v.x < 0 || tl.x + v.x >= room.size.x || tl.y + v.y < 0 || tl.y + v.y >= room.size.y) continue;
 
-        materials[room.grid[tl.x + v.x + (tl.y + v.y) * room.size.x]].render(v);
+        materials[room.grid[tl.x + v.x + (tl.y + v.y) * room.size.x]].render(v._addV(tl));
       }
     }
-    
-    renderer.restore();
 
 
     

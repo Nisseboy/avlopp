@@ -19,6 +19,10 @@ let texturePathsMaterials = [
 
   "material/wall/1",
 
+  "material/shelf/middle",
+  "material/shelf/middle/1",
+  "material/shelf/middle/2",
+
   "material/marker/entrance",
 ];
 

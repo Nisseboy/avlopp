@@ -8,7 +8,7 @@ class EntityPlayer extends EntityBase {
     this.speed = 4;
     this.texture = "duck/1";
     this.footTexture = "duck/foot";
-    this.slotAmount = 4;
+    this.slotAmount = 5;
     
     this.hardHoldWeight = 10;
 

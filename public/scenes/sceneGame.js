@@ -309,21 +309,17 @@ class SceneGame extends Scene {
 
 
     //World grid
-    renderer.save();
 
     let tl = cam.pos._subV(new Vec(cam.w, cam.w / 16 * 9).mul(0.5)).floor();
-    renderer.translate(tl);
     
     let v = new Vec();
     for (v.x = 0; v.x < cam.w + 1; v.x++) {
       for (v.y = 0; v.y < cam.w / 16 * 9 + 1; v.y++) {
         if (tl.x + v.x < 0 || tl.x + v.x >= world.size.x || tl.y + v.y < 0 || tl.y + v.y >= world.size.y) continue;
 
-        materials[world.grid[tl.x + v.x + (tl.y + v.y) * world.size.x]].render(v);
+        materials[world.grid[tl.x + v.x + (tl.y + v.y) * world.size.x]].render(v._addV(tl));
       }
     }
-    
-    renderer.restore();
 
 
     

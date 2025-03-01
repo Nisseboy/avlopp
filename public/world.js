@@ -18,6 +18,25 @@ class WorldMaterial {
   }
 }
 
+class WorldMaterialRandom extends WorldMaterial {
+  constructor(solid, opaque, texture, randomTextures) {
+    super(solid, opaque, texture);
+
+    this.randomTextures = randomTextures;
+  }
+  render(pos) {
+    super.render(pos);
+
+    let rand = (RNG(pos.x + " " + pos.y * world.size.x)[0] / 1000) % 1;
+
+    let index = Math.floor(rand * (this.randomTextures.length + 1));
+    if (index == 0) return;
+    let texture = this.randomTextures[index - 1];
+
+    renderer.image(tex[texture], pos, new Vec(1, 1));
+  }
+}
+
 
 let materials = [
   new WorldMaterial(false, false, "material/grass/1"), //0
@@ -25,6 +44,7 @@ let materials = [
   new WorldMaterial(true, true, "material/wall/1"), //2
   new WorldMaterial(false, false, "material/floor/drain"), //3
   new WorldMaterial(false, false, "material/marker/entrance"), //4
+  new WorldMaterialRandom(true, false, "material/shelf/middle", ["material/shelf/middle/1", "material/shelf/middle/2"]), //5
 ];
 
 
@@ -303,7 +323,7 @@ class World {
     }
   }
 
-  raycast(startPos, angle, maxLength = 10000) {
+  raycast(startPos, angle, ignoreSolid, ignoreOpaque, maxLength = 10000) {
     let dirx = Math.cos(angle);
     let diry = Math.sin(angle);
     if (dirx == 0) dirx = 0.001;
@@ -356,7 +376,8 @@ class World {
         };
       }
 
-      if (materials[this.grid[newPosx + newPosy * this.size.x]].opaque) {
+      let endBlock = materials[this.grid[newPosx + newPosy * this.size.x]];
+      if ((endBlock.opaque && !ignoreOpaque) || (endBlock.solid && !ignoreSolid)) {
         return {
           length: Math.sqrt(sqd),
           hitPos: new Vec(posx, posy),
