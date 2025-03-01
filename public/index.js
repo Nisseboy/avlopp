@@ -10,6 +10,8 @@ let player;
 let id;
 let idLookup = {};
 
+let tex = {};
+
 let events = [];
 
 let settings = JSON.parse(localStorage.getItem("avloppSettings") || '{"visibilitySamples": 1000, "renderResolution": 100, "lightingEnabled": true}');
@@ -19,7 +21,6 @@ let settings = JSON.parse(localStorage.getItem("avloppSettings") || '{"visibilit
 document.body.onload = e => {
   nde = new NDE(document.getElementsByTagName("main")[0]);
   renderer = nde.renderer;
-  preloadTextures();
 
   nde.debug = true;
 
@@ -83,12 +84,28 @@ document.body.onload = e => {
       socket.emit("join", {lobby: lobby});
       socket.on("join", (data) => {
         id = data.id;
+
+
+        let assets = data.assets;
+        for (let asset of assets) {
+          let split1 = asset.split("\\");
+          let assetType = split1.splice(0, 1);
+          let path = split1.join("/");
+
+          let split2 = path.split(".");
+          let ending = split2.splice(split2.length - 1, 1);
+
+          let name = split2.join(".");
+
+          if (assetType == "textures" && (ending == "png")) {
+            tex[name] = nde.loadImg("assets/" + asset);
+          }
+        }
+        
+
         
         scenes.game.loadWorld(new World().from(data.world));
         nde.setScene(scenes.mainMenu);
-
-        //scenes.editor.loadRoom(new Room().from(JSON.parse(allRooms[0])));
-        //nde.setScene(scenes.editor);
       });
     }
   });
