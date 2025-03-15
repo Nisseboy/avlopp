@@ -8,49 +8,69 @@
 
 
 class WorldMaterial {
-  constructor(solid, opaque, texture) {
-    this.solid = solid;
-    this.opaque = opaque;
-    this.texture = texture;
+  constructor(textures, options = {solid: false, opaque: false, randomTextures: [], randomRotations: []}) {
+    this.textures = textures;
+
+    this.solid = options.solid;
+    this.opaque = options.opaque;
+    this.randomTextures = options.randomTextures;
+    this.randomRotations = options.randomRotations;
   }
-  render(pos) {
-    renderer.image(tex[this.texture], pos, new Vec(1, 1));
+
+  transform(pos, rot) {
+    renderer.translate(pos._addV(vecHalf));
+    if (rot) renderer.rotate(rot);
+    renderer.translate(vecHalf._mul(-1));
   }
-}
 
-class WorldMaterialRandom extends WorldMaterial {
-  constructor(solid, opaque, texture, randomTextures) {
-    super(solid, opaque, texture);
+  render(pos, rot) {
+    renderer.save();
 
-    this.randomTextures = randomTextures;
-  }
-  render(pos) {
-    super.render(pos);
 
-    let rand = (RNG(pos.x + " " + pos.y * world.size.x)[0] / 1000) % 1;
+    if (this.randomRotations) {
+      let rand = (RNG(pos.x + " " + pos.y * world.size.x)[0] / 1000) % 1;
 
-    let index = Math.floor(rand * (this.randomTextures.length + 1));
-    if (index == 0) return;
-    let texture = this.randomTextures[index - 1];
+      let index = Math.floor(rand * this.randomRotations.length);
+      let rotation = this.randomRotations[index];
 
-    renderer.image(tex[texture], pos, new Vec(1, 1));
+      rot += rotation;
+    }
+
+  
+    this.transform(pos, rot);
+    for (let t of this.textures) {
+      renderer.image(tex[t], vecZero, vecOne);
+    }
+
+    if (this.randomTextures) {
+      let rand = (RNG(pos.x + " " + pos.y * world.size.x)[0] / 1000) % 1;
+  
+      let index = Math.floor(rand * this.randomTextures.length);
+      let texture = this.randomTextures[index];
+  
+      renderer.image(tex[texture], vecZero, vecOne);
+    }
+
+
+    renderer.restore();
   }
 }
 
 
 let materials = [
-  new WorldMaterial(false, false, "material/grass/1"), //0
-  new WorldMaterial(false, false, "material/floor/1"), //1
-  new WorldMaterial(true, true, "material/wall/1"), //2
-  new WorldMaterial(false, false, "material/floor/drain"), //3
-  new WorldMaterial(false, false, "material/marker/entrance"), //4
-  new WorldMaterialRandom(true, false, "material/shelf/middle", ["material/shelf/middle/1", "material/shelf/middle/2"]), //5
+  new WorldMaterial(["material/grass/1"], {solid: false, opaque: false}), //0
+  new WorldMaterial(["material/floor/1"], {solid: false, opaque: false}), //1
+  new WorldMaterial(["material/wall/1"], {solid: true, opaque: true}), //2
+  new WorldMaterial(["material/floor/drain"], {solid: false, opaque: false}), //3
+  new WorldMaterial(["material/marker/entrance"], {solid: false, opaque: false}), //4
+  new WorldMaterial(["material/floor/1", "material/shelf/middle"], {solid: true, opaque: false, randomTextures: ["empty", "material/shelf/middle/1", "material/shelf/middle/2"], randomRotations: [0, Math.PI]}), //5
 ];
 
 
 class World {
   constructor() {
     this.grid = [];
+    this.rotGrid = [];
     this.entities = [];
     this.objects = [];
 
@@ -62,7 +82,8 @@ class World {
   random() {
     this.size = new Vec(constants.worldSize*5, constants.worldSize*5);
     
-    this.grid = new Array(this.size.x * this.size.y).fill(0).map(e=>{return Math.floor(Math.random() * 2.2)});
+    this.grid = new Array(this.size.x * this.size.y).fill(0);
+    this.rotGrid = new Array(this.size.x * this.size.y).fill(0);
     this.entities = [];
 
     for (let x = 0; x < this.size.x; x++) {
@@ -311,8 +332,12 @@ class World {
     for (p.x = 0; p.x < room.size.x; p.x++) {
       for (p.y = 0; p.y < room.size.y; p.y++) {
         let material = room.grid[p.x + p.y * room.size.x];
-
         this.grid[p.x + pos.x + (p.y + pos.y) * this.size.x] = material;
+
+        if (room.rotGrid) {
+          let rot = room.rotGrid[p.x + p.y * room.size.x];
+          this.rotGrid[p.x + pos.x + (p.y + pos.y) * this.size.x] = rot;
+        }
       }
     }
 
@@ -412,6 +437,11 @@ class World {
     }
 
     this.grid = [...data.grid];
+
+    if (data.rotGrid) 
+      this.rotGrid = [...data.rotGrid];
+    else
+      this.rotGrid = new Array(this.size.x * this.size.y).fill(0);
 
     return this;
   }

@@ -26,7 +26,14 @@ class SceneSettings extends Scene {
       },
 
       setting: {
-        padding: 10, 
+        padding: 10,
+
+        range: {
+          text: {
+            width: 140,
+          },
+        },
+        
         hover: { 
           stroke: "rgba(255, 0, 0, 1)", 
           checkbox: {
@@ -35,7 +42,7 @@ class SceneSettings extends Scene {
           },
           range: {
             fill: "rgba(255, 0, 0, 1)", 
-            stroke: "rgba(255, 0, 0, 1)"
+            stroke: "rgba(255, 0, 0, 1)",
           },
         },
       }
@@ -47,9 +54,9 @@ class SceneSettings extends Scene {
       }]}),
 
       new SettingCollection(new Vec(50, 150), settings, settingCollectionStyle, {
-        visibilitySamples: {type: RangeBase, args: [200, 10000, 1000], name: "Visibility rays"},
-        renderResolution: {type: RangeBase, args: [25, 100, 100], name: "Render Resolution"},
-        lightingEnabled: {type: CheckboxBase, args: [true], size: new Vec(50, 50), name: "Lighting Enabled"},
+        visibilitySamples:  {type: SettingRange,     args: {min: 200, max: 10000, default: 1000, step: 100}, name: "Visibility rays"},
+        renderResolution:   {type: SettingRange,     args: {min: 25, max: 100, default: 100, step: 1},       name: "Render Resolution", events: {change: [e=>{window.dispatchEvent(new Event('resize'));}]}},
+        lightingEnabled:    {type: SettingCheckbox,  args: {default: true},                                  name: "Lighting Enabled", style: {size: new Vec(50, 50)}},
       }, {
         change: [function (value) {
           localStorage.setItem("avloppSettings", JSON.stringify(settings));

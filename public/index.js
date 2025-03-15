@@ -11,6 +11,7 @@ let id;
 let idLookup = {};
 
 let tex = {};
+let aud = {};
 
 let events = [];
 
@@ -100,12 +101,21 @@ document.body.onload = e => {
           if (assetType == "textures" && (ending == "png")) {
             tex[name] = nde.loadImg("assets/" + asset);
           }
+          
+          if (assetType == "audio" && (ending == "mp3")) {
+            aud[name] = nde.loadAud("assets/" + asset);
+          }
         }
-        
 
         
-        scenes.game.loadWorld(new World().from(data.world));
-        nde.setScene(scenes.mainMenu);
+        let interval = setInterval(() => {
+          if (nde.unloadedAssets.length != 0) return;
+
+          clearInterval(interval);
+        
+          scenes.game.loadWorld(new World().from(data.world));
+          nde.setScene(scenes.mainMenu);
+        }, 16);
       });
     }
   });

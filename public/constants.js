@@ -9,6 +9,8 @@ let constants = {
 
 
 let vecZero = new Vec(0, 0);
+let vecHalf = new Vec(0.5, 0.5);
+let vecOne = new Vec(1, 1);
 
 
 function generateID() {

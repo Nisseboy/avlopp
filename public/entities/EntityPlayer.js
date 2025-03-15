@@ -18,6 +18,7 @@ class EntityPlayer extends EntityBase {
     this.footstepTime = 0.1;
     this.footDist = 0.6;
     this.feet = [{pos: vecZero.copy(), offset: new Vec(0, -0.2), dir: this.dir}, {pos: vecZero.copy(), offset: new Vec(0, 0.2), dir: this.dir}];
+    this.feetAudio = ["duck/step/1","duck/step/2","duck/step/3","duck/step/4"];
   }
 
   doMovement(dt) {
@@ -70,11 +71,19 @@ class EntityPlayer extends EntityBase {
 
       if (largestDist >= this.footDist) {
         let target = this.pos._addV(foot.offset._addV(new Vec(this.footDist, 0)).rotateZAxis(this.dir));
+        if (foot.pos.x == target.x && foot.pos.y == target.y) return;
+        
         foot.pos.from(target);
         foot.dir = this.dir;
 
-        this.timeSinceStep = 0;
+
+        //let audio = aud[this.feetAudio[Math.floor(Math.random() * this.feetAudio.length)]];
+        //audio.play();
+        //console.log("played");
         
+
+
+        this.timeSinceStep = 0;
       }
     }
   }

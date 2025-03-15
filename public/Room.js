@@ -5,12 +5,14 @@ class Room {
     this.size = size;
 
     this.grid = undefined;
+    this.rotGrid = undefined;
     this.objects = undefined;
   }
   
 
   generate() {
     this.grid = new Array(this.size.x * this.size.y).fill(1);
+    this.rotGrid = new Array(this.size.x * this.size.y).fill(0);
     this.objects = [];
 
     for (let x = 0; x < this.size.x; x++) {
@@ -48,6 +50,10 @@ class Room {
     }
     this.grid = newGrid;
 
+    for (let i = 0; i < this.rotGrid.length; i++) {
+      this.rotGrid[i] += angle;
+    }
+
     this.size = newSize;
 
     return this;
@@ -70,6 +76,11 @@ class Room {
     }
 
     this.grid = [...data.grid];
+
+    if (data.rotGrid) 
+      this.rotGrid = [...data.rotGrid];
+    else
+      this.rotGrid = new Array(this.size.x * this.size.y).fill(0);
 
     return this;
   }

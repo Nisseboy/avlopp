@@ -283,6 +283,7 @@ class SceneGame extends Scene {
   }
 
   render() {
+
     let cam = this.cam;
 
     //Resize visibility mask and lighting texture if needed
@@ -317,7 +318,8 @@ class SceneGame extends Scene {
       for (v.y = 0; v.y < cam.w / 16 * 9 + 1; v.y++) {
         if (tl.x + v.x < 0 || tl.x + v.x >= world.size.x || tl.y + v.y < 0 || tl.y + v.y >= world.size.y) continue;
 
-        materials[world.grid[tl.x + v.x + (tl.y + v.y) * world.size.x]].render(v._addV(tl));
+        let index = tl.x + v.x + (tl.y + v.y) * world.size.x;
+        materials[world.grid[index]].render(v._addV(tl), world.rotGrid[index]);
       }
     }
 
@@ -406,7 +408,7 @@ class SceneGame extends Scene {
     //Slots
     renderer.save();
 
-    let slotSize = new Vec(1, 1);
+    let slotSize = vecOne;
     let slotMargin = 0.1;
     
     renderer.set("fill", "rgba(255, 255, 255, 0.02");

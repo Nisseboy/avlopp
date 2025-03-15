@@ -6,8 +6,6 @@ This is a built version of nde (Nils Delicious Engine) and is basically all the 
 */
 /* src/ndv.js */
 /*
-/*
-/*
 
 All of these are valid:
 let v = new Vec();
@@ -332,8 +330,6 @@ class Vec {
 
 
 
-
-
 /* src/camera.js */
 class Camera {
   constructor(pos) {
@@ -560,6 +556,47 @@ class Img extends Asset {
 
 
 
+/* src/assets/aud.js */
+class Aud extends Asset {
+  constructor() {
+    super();
+
+    this.duration = undefined;
+
+    this.audio = new Audio();
+
+    this.instances = [];
+  }
+
+  play() {
+    if (this.audio.paused) this.audio.play();
+    else {
+      let audio = new Audio(this.path);
+      this.instances.push(audio);
+      audio.play();
+
+      audio.onended = () => {
+        let index = this.instances.indexOf(audio);
+        if (index != -1)
+          this.instances.splice(index, 1);
+      }
+    }
+  }
+  stop() {    
+    this.audio.stop();
+
+    for (let i = 0; i < this.instances.length; i++) {
+      this.instances[i].stop();
+      this.instances.splice(i, 1);
+      i--;
+    }
+  }
+}
+
+
+
+
+
 /* src/renderers/rendererBase.js */
 class RendererBase {
   constructor() {
@@ -740,22 +777,10 @@ class UIElementBase {
   }
 
   fillStyle(style) {
-    function f(style, parent, defaultStyle) {
-      for (let i in defaultStyle) {
-        let s = style[i];
-        parent[i] = s;
+    nestedObjectAssign(this.style, this.defaultStyle, style);
 
-        if (typeof s == "object" && !Array.isArray(s) && i != "hover") {
-          f(s, parent[i], defaultStyle[i]);
-        } else {
-          if (parent[i] == undefined) parent[i] = defaultStyle[i];
-        }
-      }
-    }
-
-    f(style, this.style, this.defaultStyle);
-
-    f(style.hover, this.style.hover, this.style);
+    delete this.style.hover;
+    this.style.hover = nestedObjectAssign({}, this.style, style.hover);
   }
 
   registerEvent(eventName, func) {
@@ -768,7 +793,7 @@ class UIElementBase {
       for (let e of events) e(...args);
   }
 
-  render() {
+  checkHovered() {
     this.hovered = false;
     
     let mousePoint = new DOMPoint(nde.mouse.x, nde.mouse.y);
@@ -784,11 +809,37 @@ class UIElementBase {
     }
 
     if (this.forceHover) this.hovered = true;
+  }
 
+  render() {
     renderer.applyStyles(this.hovered ? this.style.hover : this.style);
     
     renderer.rect(this.pos, this.size._add(this.style.padding * 2));    
   }
+}
+
+
+
+
+function nestedObjectAssign(dest, target, source) {  
+  Object.assign(dest, target, source);
+  if (target == undefined || source == undefined) return dest;
+
+  for (let key in dest) {
+    let ob = dest[key];
+    
+    if (ob instanceof Vec) {
+      dest[key] = new Vec().from(ob);
+    }
+    else if (Array.isArray(ob)) {
+      
+    }
+    else if (ob instanceof Object) {
+      dest[key] = nestedObjectAssign({}, target[key], source[key]);
+    }
+  }
+
+  return dest;
 }
 
 
@@ -802,6 +853,7 @@ class ButtonBase extends UIElementBase {
   }
 
   render() {
+    super.checkHovered();
     super.render();  
   }
 }
@@ -874,8 +926,90 @@ class ButtonImage extends ButtonBase {
 
 
 
-/* src/ui/settings/UIElementSetting.js */
-class UIElementSetting extends UIElementBase {
+/* src/ui/settings/settingCollection.js */
+class SettingCollection extends UIElementBase {
+  constructor(pos, value, style, settingsTemplate, events) {
+    super(pos, new Vec(0, 0), events);
+
+    this.value = value;
+
+    this.defaultStyle = {
+      hover: {}, //Irrelevant
+
+      size: new Vec(500, 50),
+      gap: 10,
+      settingXOffset: 600,
+
+      text: {
+        font: "50px monospace",
+        textAlign: ["left", "top"],
+        fill: "rgba(255, 255, 255, 1)",
+      },
+
+      setting: {
+        padding: 0,
+      },
+    };
+    this.fillStyle(style);
+    this.settingsTemplate = settingsTemplate;
+
+    
+
+    this.elements = {};
+
+    let y = 0;
+    for (let i in settingsTemplate) {
+      let setting = settingsTemplate[i];   
+
+      let settingStyle = style;
+      if (setting.style) {        
+        settingStyle = nestedObjectAssign({}, style, setting.style);
+      }
+      
+      let events = setting.events || {};
+
+      if (!events.input) events.input = [];
+      if (!events.change) events.change = [];
+      events.input.push(value => {
+        this.value[i] = value;
+        this.fireEvent("input", this.value);
+      });
+      events.change.push(value => {
+        this.value[i] = value;
+        this.fireEvent("change", this.value);
+      });
+      
+      this.elements[i] = new setting.type(new Vec(pos.x + settingStyle.settingXOffset, pos.y + y), settingStyle.size, settingStyle.setting, setting.args, events);
+
+      if (value[i] != undefined) this.elements[i].setValue(value[i]);
+
+      this.value[i] = this.elements[i].value;
+
+      
+      y += settingStyle.size.y + settingStyle.gap + settingStyle.setting.padding * 2;
+      
+    }
+  }
+
+  render() {
+    for (let i in this.elements) {
+      let elem = this.elements[i];      
+      renderer.applyStyles(this.style.text);
+      renderer.text(this.settingsTemplate[i].name || i, new Vec(this.pos.x, elem.pos.y));
+
+      elem.render();
+    }
+  }
+}
+
+
+
+
+
+
+
+/* src/ui/settings/SettingBase.js */
+class SettingBase extends UIElementBase {
   constructor(pos, size, events, value) {
     super(pos, size, events);
 
@@ -898,75 +1032,10 @@ class UIElementSetting extends UIElementBase {
 
 
 
-/* src/ui/settings/settingCollection.js */
-class SettingCollection extends UIElementBase {
-  constructor(pos, value, style, settingsTemplate, events) {
-    super(pos, new Vec(0, 0), events);
-
-    this.value = value;
-
-    this.defaultStyle = {
-      hover: {}, //Irrelevant
-
-      size: new Vec(500, 50),
-      gap: 10,
-      settingXOffset: 400,
-
-      text: {
-        font: "50px monospace",
-        textAlign: ["left", "top"],
-        fill: "rgba(255, 255, 255, 1)",
-      },
-
-      setting: {
-        padding: 0,
-      },
-    };
-    this.style = style;
-    this.fillStyle(style);
-    this.settingsTemplate = settingsTemplate;
-
-    this.elements = {};
-
-    let y = 0;
-    for (let i in settingsTemplate) {
-      let setting = settingsTemplate[i];            
-      this.elements[i] = new setting.type(new Vec(pos.x + (setting.settingXOffset != undefined?setting.settingXOffset:style.settingXOffset), pos.y + y), setting.size?setting.size:this.style.size, setting.style?setting.style.setting:style.setting, ...setting.args, {
-        change: [value => {
-          this.value[i] = value;
-          this.fireEvent("change", this.value);
-        }],
-      });
-
-      if (value[i] != undefined) this.elements[i].setValue(value[i]);
-
-      this.value[i] = this.elements[i].value;
-
-      y += (setting.size?setting.size.y:style.size.y) + (setting.gap != undefined?setting.gap:style.gap) + style.setting.padding * 2;
-      
-    }
-  }
-
-  render() {
-    for (let i in this.elements) {
-      let elem = this.elements[i];
-
-      renderer.applyStyles(this.style.text);
-      renderer.text(this.settingsTemplate[i].name || i, new Vec(this.pos.x, elem.pos.y));
-
-      elem.render();
-    }
-  }
-}
-
-
-
-
-
-/* src/ui/settings/checkboxBase.js */
-class CheckboxBase extends UIElementSetting {
-  constructor(pos, size, style, value, events) {
-    super(pos, size, events, value);
+/* src/ui/settings/SettingCheckbox.js */
+class SettingCheckbox extends SettingBase {
+  constructor(pos, size, style, args, events) {
+    super(pos, size, events, args.default);
 
 
     this.defaultStyle.checkbox = {
@@ -976,7 +1045,7 @@ class CheckboxBase extends UIElementSetting {
     
     this.fillStyle(style);
     
-    this.setValue(value);
+    this.setValue(args.default);
 
     this.funcA = e=>this.mouseup2(e);
     this.registerEvent("mouseup", e=>{this.mouseup1(e)});
@@ -1001,6 +1070,7 @@ class CheckboxBase extends UIElementSetting {
   }
 
   render() {
+    super.checkHovered();
     super.render();  
     this.rendererTransform = renderer.getTransform();
 
@@ -1018,24 +1088,37 @@ class CheckboxBase extends UIElementSetting {
 
 
 
-/* src/ui/settings/rangeBase.js */
-class RangeBase extends UIElementSetting {
-  constructor(pos, size, style, min, max, value, events) {
-    super(pos, size, events, value);
+/* src/ui/settings/SettingRange.js */
+class SettingRange extends SettingBase {
+  constructor(pos, size, style, args, events) {
+    super(pos, size, events, args.default);
 
     this.defaultStyle.range = {
       fill: "rgba(255, 255, 255, 1)",
       stroke: "rgba(255, 255, 255, 1)",
+
+      text: {
+        margin: 10,
+        width: 50,
+        
+        font: "50px monospace",
+        textAlign: ["right", "middle"],
+        fill: "rgba(255, 255, 255, 1)",
+      },
+
+      hover: {}
     };
     
     this.fillStyle(style);
     
-
+    this.rangeSizeTotal = new Vec(size.x - this.style.range.text.margin - this.style.range.text.width - this.style.padding, size.y);
+    
     this.rangeSize = new Vec(size.y, size.y);
 
-    this.min = min;
-    this.max = max;
-    this.setValue(value);
+    this.min = args.min;
+    this.max = args.max;
+    this.step = args.step || 1;
+    this.setValue(args.default);
 
     this.rendererTransform = undefined;
 
@@ -1053,12 +1136,10 @@ class RangeBase extends UIElementSetting {
   }
 
   mousemove(e) {
-    if (!nde.pressed["mouse0"]) return;
-
     let mousePoint = new DOMPoint(nde.mouse.x, nde.mouse.y);
     let transformedMousePoint = mousePoint.matrixTransform(this.rendererTransform.inverse());
     
-    let progress = Math.min(Math.max((transformedMousePoint.x - this.pos.x - this.style.padding) / this.size.x, 0), 1);
+    let progress = Math.min(Math.max((transformedMousePoint.x - this.pos.x - this.style.padding) / this.rangeSizeTotal.x, 0), 1);
     this.setValue(progress * (this.max - this.min) + this.min);
   }
 
@@ -1072,16 +1153,26 @@ class RangeBase extends UIElementSetting {
   }
 
   setValue(newValue) {
-    super.setValue(newValue);
+    super.setValue(Math.round(newValue / this.step) * this.step);
 
-    this.rangeSize.x = (this.value - this.min) / (this.max - this.min) * this.size.x;
+    this.rangeSize.x = (this.value - this.min) / (this.max - this.min) * this.rangeSizeTotal.x;
   }
 
   render() {
-    super.render();  
+    super.checkHovered();
+
     this.rendererTransform = renderer.getTransform();
 
+    renderer.applyStyles(this.hovered ? this.style.hover : this.style);
+    renderer.rect(this.pos, this.rangeSizeTotal._add(this.style.padding * 2));
+    
+    let numberPos = new Vec(this.pos.x + this.rangeSizeTotal.x + this.style.padding * 2 + this.style.range.text.margin, this.pos.y);
+    renderer.rect(numberPos, new Vec(this.style.range.text.width, this.size.y).add(this.style.padding * 2));
+
     this.renderContent();
+
+    renderer.applyStyles(this.hovered ? this.style.hover.range.text : this.style.range.text);
+    renderer.text(this.value, numberPos._addV(new Vec(this.style.padding + this.style.range.text.width, this.size.y / 2 + this.style.padding)));
   }
 
   renderContent() {
@@ -1450,66 +1541,7 @@ class NDE {
         this.fireEvent("afterSetup");
 
 
-        
-        {
-          window.addEventListener("resize", e => {this.resize(e)});
-
-          document.addEventListener("keydown", e => {
-            if (this.debug) console.log(e.key);
-          
-            this.pressed[e.key.toLowerCase()] = true;
-          
-            this.fireEvent("keydown", e);
-            
-          });
-          document.addEventListener("keyup", e => {
-            delete this.pressed[e.key.toLowerCase()];
-          
-            this.fireEvent("keyup", e);
-          });
-          
-          document.addEventListener("mousemove", e => {
-            this.mouse.x = e.clientX / this.mainImg.size.x * this.w;
-            this.mouse.y = e.clientY / this.mainImg.size.x * this.w;
-
-
-            if (this.hoveredUIElement) {
-              if (!this.transition) this.hoveredUIElement.fireEvent("mousemove", e);
-            }
-            
-            this.fireEvent("mousemove", e);
-          });
-          document.addEventListener("mousedown", e => {
-            this.pressed["mouse" + e.button] = true;
-
-            if (this.hoveredUIElement) {
-              if (!this.transition) this.hoveredUIElement.fireEvent("mousedown", e);
-              return;
-            }
-          
-            if (this.debug) console.log("mouse" + e.button);
-            this.fireEvent("mousedown", e);
-          });
-          document.addEventListener("mouseup", e => {
-            delete this.pressed["mouse" + e.button];
-
-            if (this.hoveredUIElement) {
-              if (!this.transition) this.hoveredUIElement.fireEvent("mouseup", e);
-            }
-          
-            this.fireEvent("mouseup", e);
-          });
-          document.addEventListener("wheel", e => {
-            this.fireEvent("wheel", e);
-          });
-
-          
-          window.oncontextmenu = (e) => {
-            e.preventDefault(); 
-            e.stopPropagation(); 
-            return false;
-          };
-        }
+        this.setupHandlers();
 
       
         this.lastFrameTime = performance.now();
@@ -1527,6 +1559,66 @@ class NDE {
       
       i++;
     }, 50);
+  }
+
+  setupHandlers() {
+    window.addEventListener("resize", e => {this.resize(e)});
+
+    document.addEventListener("keydown", e => {
+      if (this.debug) console.log(e.key);
+    
+      this.pressed[e.key.toLowerCase()] = true;
+    
+      this.fireEvent("keydown", e);
+      
+    });
+    document.addEventListener("keyup", e => {
+      delete this.pressed[e.key.toLowerCase()];
+    
+      this.fireEvent("keyup", e);
+    });
+    
+    document.addEventListener("mousemove", e => {
+      this.mouse.x = e.clientX / this.mainImg.size.x * this.w;
+      this.mouse.y = e.clientY / this.mainImg.size.x * this.w;
+
+
+      if (this.hoveredUIElement) {
+        if (!this.transition) this.hoveredUIElement.fireEvent("mousemove", e);
+      }
+      
+      this.fireEvent("mousemove", e);
+    });
+    document.addEventListener("mousedown", e => {
+      if (this.hoveredUIElement) {
+        if (!this.transition) this.hoveredUIElement.fireEvent("mousedown", e);
+        return;
+      }
+    
+      if (this.debug) console.log("mouse" + e.button);
+
+      this.pressed["mouse" + e.button] = true;
+      this.fireEvent("mousedown", e);
+    });
+    document.addEventListener("mouseup", e => {
+      delete this.pressed["mouse" + e.button];
+
+      if (this.hoveredUIElement) {
+        if (!this.transition) this.hoveredUIElement.fireEvent("mouseup", e);
+      }
+      
+      this.fireEvent("mouseup", e);
+    });
+    document.addEventListener("wheel", e => {
+      this.fireEvent("wheel", e);
+    });
+
+    
+    window.oncontextmenu = (e) => {
+      e.preventDefault(); 
+      e.stopPropagation(); 
+      return false;
+    };
   }
 
   setScene(newScene) {
@@ -1678,14 +1770,27 @@ class NDE {
     this.renderer.display(this.mainImg);
   }
 
+  loadAssetHelper(asset, actualAsset, path) {
+    asset.loading = true;
+    asset.path = path;
+
+    actualAsset.src = path;
+
+    this.unloadedAssets.push(asset);
+
+    actualAsset.onerror = e => {
+      console.error(`"${path}" not found`);
+
+      this.unloadedAssets.splice(this.unloadedAssets.indexOf(img));
+    };
+  }
+
   loadImg(path) {
     let img = new Img(new Vec(1, 1));
-    img.loading = true;
-    img.path = path;
-    this.unloadedAssets.push(img);
-
     let image = new Image();
-    image.src = path;
+
+    this.loadAssetHelper(img, image, path);
+
 
     image.onload = e => {
       img.resize(new Vec(image.width, image.height));
@@ -1694,13 +1799,24 @@ class NDE {
 
       this.unloadedAssets.splice(this.unloadedAssets.indexOf(img));
     };
-    image.onerror = e => {
-      console.error(`"${path}" not found`);
-
-      this.unloadedAssets.splice(this.unloadedAssets.indexOf(img));
-    };
 
     return img;
+  }
+
+  loadAud(path) {
+    let aud = new Aud();
+
+    this.loadAssetHelper(aud, aud.audio, path);
+
+
+    aud.audio.addEventListener("canplaythrough", () => {
+      aud.loading = false;
+      aud.duration = aud.audio.duration;
+
+      this.unloadedAssets.splice(this.unloadedAssets.indexOf(aud));
+    });
+
+    return aud;
   }
 }
 

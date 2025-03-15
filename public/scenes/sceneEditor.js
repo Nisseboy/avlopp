@@ -37,7 +37,7 @@ class SceneEditor extends Scene {
         nde.transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
       }]}),
       new ButtonText(new Vec(25, 75), "Export", this.buttonStyle, {mousedown: [() => {
-        console.log(`'${JSON.stringify(this.room)}'`);
+        console.log(`'${JSON.stringify(this.room)}',`);
       }]}),
     ];
   }
@@ -151,6 +151,9 @@ class SceneEditor extends Scene {
   }
 
   render() {
+    renderer.set("fill", "0");
+    renderer.rect(vecZero, new Vec(nde.w, nde.w / 16 * 9));
+    
     let cam = this.cam;
     let room = this.room;
 
@@ -178,7 +181,8 @@ class SceneEditor extends Scene {
       for (v.y = 0; v.y < cam.w / 16 * 9 + 1; v.y++) {
         if (tl.x + v.x < 0 || tl.x + v.x >= room.size.x || tl.y + v.y < 0 || tl.y + v.y >= room.size.y) continue;
 
-        materials[room.grid[tl.x + v.x + (tl.y + v.y) * room.size.x]].render(v._addV(tl));
+        let index = tl.x + v.x + (tl.y + v.y) * room.size.x;
+        materials[room.grid[index]].render(v._addV(tl), room.rotGrid[index]);
       }
     }
 
@@ -206,7 +210,7 @@ class SceneEditor extends Scene {
     if (paintOpen) {
       renderer.save();
       renderer.set("fill", "rgba(0, 0, 0, 0.2)");
-      renderer.rect(mousePos._floor(), new Vec(1, 1));
+      renderer.rect(mousePos._floor(), vecOne);
       renderer.restore();
     }
     
