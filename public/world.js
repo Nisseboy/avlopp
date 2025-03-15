@@ -64,7 +64,9 @@ let materials = [
   new WorldMaterial(["material/floor/drain"], {solid: false, opaque: false}), //3
   new WorldMaterial(["material/marker/entrance"], {solid: false, opaque: false}), //4
   new WorldMaterial(["material/floor/1", "material/shelf/middle"], {solid: true, opaque: false, randomTextures: ["empty", "material/shelf/middle/1", "material/shelf/middle/2"], randomRotations: [0, Math.PI]}), //5
+  new WorldMaterial(["material/floor/1", "material/shelf/corner"], {solid: true, opaque: false}), //6
 ];
+
 
 
 class World {

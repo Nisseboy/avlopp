@@ -38,6 +38,7 @@ class Room {
     }
 
     let newGrid = new Array(this.size.x * this.size.y);
+    let newRotGrid = new Array(this.size.x * this.size.y);
     let pos = new Vec(0, 0);
     for (pos.x = 0; pos.x < this.size.x; pos.x++) {
       for (pos.y = 0; pos.y < this.size.y; pos.y++) {
@@ -45,14 +46,14 @@ class Room {
 
         let material = this.grid[pos.x + pos.y * this.size.x];
         newGrid[newPos.x + newPos.y * newSize.x] = material;
+
+        let rot = this.rotGrid[pos.x + pos.y * this.size.x];
+        newRotGrid[newPos.x + newPos.y * newSize.x] = rot + angle;
         
       }
     }
     this.grid = newGrid;
-
-    for (let i = 0; i < this.rotGrid.length; i++) {
-      this.rotGrid[i] += angle;
-    }
+    this.rotGrid = newRotGrid;
 
     this.size = newSize;
 

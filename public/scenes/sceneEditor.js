@@ -15,6 +15,7 @@ class SceneEditor extends Scene {
     this.selectedObjectsOffsets = [];
 
     this.selectedMaterial = 0;
+    this.materialRot = 0;
 
     this.room = undefined;
   }
@@ -75,7 +76,9 @@ class SceneEditor extends Scene {
     if (paintPressed) {
       if (nde.getKeyPressed("Move/Paint")) {
         if (mousePos.x >= 0 && mousePos.x < this.room.size.x && mousePos.y >= 0 && mousePos.y < this.room.size.y) {
-          this.room.grid[Math.floor(mousePos.x) + Math.floor(mousePos.y) * this.room.size.x] = this.selectedMaterial;
+          let index = Math.floor(mousePos.x) + Math.floor(mousePos.y) * this.room.size.x;
+          this.room.grid[index] = this.selectedMaterial;
+          this.room.rotGrid[index] = this.materialRot;
         }
       }
 
@@ -106,11 +109,16 @@ class SceneEditor extends Scene {
         
         o.dir += Math.sign(e.deltaY) * Math.PI / 16;
       }
-      return;
+
+    } else if (nde.getKeyPressed("Paint Modifier")) {
+      this.materialRot += Math.sign(e.deltaY) * Math.PI / 4;
+
+    } else {
+      if (e.deltaY < 0) this.cam.w /= 1.2;
+      else this.cam.w *= 1.2;
+
     }
 
-    if (e.deltaY < 0) this.cam.w /= 1.2;
-    else this.cam.w *= 1.2;
   }
 
   mousedown(e) {
@@ -209,8 +217,8 @@ class SceneEditor extends Scene {
 
     if (paintOpen) {
       renderer.save();
-      renderer.set("fill", "rgba(0, 0, 0, 0.2)");
-      renderer.rect(mousePos._floor(), vecOne);
+      renderer.set("filter", "opacity(0.5)");
+      materials[this.selectedMaterial].render(mousePos._floor(), this.materialRot);
       renderer.restore();
     }
     
@@ -335,8 +343,8 @@ class SceneEditor extends Scene {
         let m = materials[i];
 
         if (this.selectedMaterial == i) style.stroke = [255, 0, 0];
-
-        new ButtonImage(pos, new Vec(50, 50), tex[m.texture], style, {mousedown: [() => {
+        
+        new ButtonImage(pos, new Vec(50, 50), tex[m.textures[m.textures.length - 1]], style, {mousedown: [() => {
           this.selectedMaterial = i;
         }]}).render();
 
