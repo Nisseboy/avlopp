@@ -31,7 +31,6 @@ class SceneGame extends Scene {
 
 
     player = world.entities.find(e=>e.id == id);
-    player.pos.from(world.lights[1].pos);
 
     //Create lookup table for all entities by id
     idLookup = {};
@@ -377,9 +376,8 @@ class SceneGame extends Scene {
       }
       renderer.image(this.lightingTexture, cam.pos._subV(camSize._div(2)), camSize);
 
-      //console.log(`${renderedLights} Lights renderered this frame`);
+      nde.debugStats.renderedLights = renderedLights;
       
-  
   
       createVisibilityMask(this.visibilityMaskTexture, cam.pos, cam.w *0.6);
       renderer.image(this.visibilityMaskTexture, cam.pos._subV(camSize._div(2)), camSize);

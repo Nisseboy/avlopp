@@ -24,6 +24,7 @@ require("./public/objects/ObjectTextureLight");
 require("./public/Room");
 require("./public/world");
 
+require("./public/Material");
 require("./public/prefabs");
 
 
@@ -60,6 +61,13 @@ async function start() {
       }
   
       player = new EntityPlayer(lobby.world.size._div(2), "EntityPlayer");
+      player.pos.from(lobby.world.entities[0].pos);
+
+      if (data.id && lobby.offlinePlayers[data.id]) {
+        player = lobby.offlinePlayers[data.id];
+        delete lobby.offlinePlayers[data.id];        
+      }
+
       lobby.world.entities.push(player);
   
       socket.emit("join", {
@@ -80,7 +88,9 @@ async function start() {
       lobby.world.entities.splice(lobby.world.entities.indexOf(player), 1);
   
       emitOthers({id: player.id, action: "disconnect"});
-  
+      
+      lobby.offlinePlayers[player.id] = player;  
+
       delete lobby.sockets[player.id];
   
       console.log(`${lobby.lobbyId}: ${player.id} Disconnected`);
@@ -118,7 +128,7 @@ async function start() {
             break;
           case "remove entity":
             let index = world.entities.findIndex(e=>e.id==data.entityId);
-            if (index == -1) continue;
+            if (index == -1) continue;            
   
             world.entities.splice(index, 1);
             break;
@@ -147,6 +157,7 @@ async function start() {
       world: new World().random(),
       sockets: {},
       events: {},
+      offlinePlayers: {},
     };
   
     let interval = setInterval(() => {

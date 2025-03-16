@@ -82,9 +82,13 @@ document.body.onload = e => {
 
       socket = io(window.location.origin);
 
-      socket.emit("join", {lobby: lobby});
+      let oldId = localStorage.getItem("id") || 0;
+
+      socket.emit("join", {lobby: lobby, id: oldId});
       socket.on("join", (data) => {
         id = data.id;
+
+        localStorage.setItem("id", id);
 
 
         let assets = data.assets;
@@ -114,7 +118,7 @@ document.body.onload = e => {
           clearInterval(interval);
         
           scenes.game.loadWorld(new World().from(data.world));
-          nde.setScene(scenes.mainMenu);
+          nde.setScene(scenes.mainMenu);          
         }, 16);
       });
     }
