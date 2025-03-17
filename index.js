@@ -158,14 +158,24 @@ async function start() {
       sockets: {},
       events: {},
       offlinePlayers: {},
+      offlineTime: 0,
     };
   
     let interval = setInterval(() => {
       if (Object.keys(lobby.sockets).length == 0) {
-        clearInterval(interval);
-        delete lobbies[lobbyId];
-        console.log(`${lobbyId}: Lobby deleted`);
+        if (lobby.offlineTime >= constants.lobbyDeleteTime) {
+          clearInterval(interval);
+          delete lobbies[lobbyId];
+          console.log(`${lobbyId}: Lobby deleted`);
+          return;
+        } else {
+          lobby.offlineTime += constants.updateInterval;
+        }
+      } else {
+        lobby.offlineTime = 0;
       }
+
+      
   
       for (let id in lobby.sockets) {
         let s = lobby.sockets[id];

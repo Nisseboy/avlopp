@@ -1,5 +1,6 @@
 let constants = {
   updateInterval: 1000 / 20,
+  lobbyDeleteTime: 60000,
   port: 80,
 
   itemAmount: 40,
