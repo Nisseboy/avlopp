@@ -68,6 +68,8 @@ async function start() {
         delete lobby.offlinePlayers[data.id];        
       }
 
+      player.displayName = data.name;
+
       lobby.world.entities.push(player);
   
       socket.emit("join", {

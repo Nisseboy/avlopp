@@ -15,7 +15,8 @@ let aud = {};
 
 let events = [];
 
-let settings = JSON.parse(localStorage.getItem("avloppSettings") || '{"visibilitySamples": 1000, "renderResolution": 100, "lightingEnabled": true}');
+let settings = JSON.parse(localStorage.getItem("avloppSettings")) || {};
+let playerName = localStorage.getItem("avloppName") || "Unnamed";
 
 
 
@@ -84,7 +85,7 @@ document.body.onload = e => {
 
       let oldId = localStorage.getItem("id") || 0;
 
-      socket.emit("join", {lobby: lobby, id: oldId});
+      socket.emit("join", {lobby: lobby, id: oldId, name: playerName});
       socket.on("join", (data) => {
         id = data.id;
 
@@ -127,6 +128,8 @@ document.body.onload = e => {
   nde.registerEvent("update", dt => {
     renderer.set("font", "16px monospace");
     renderer.set("imageSmoothing", false);
+    
+    nde.debugStats.id = id;
   });
 
   nde.registerEvent("resize", e => {

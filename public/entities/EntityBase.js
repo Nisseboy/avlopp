@@ -18,6 +18,7 @@ class EntityBase {
 
 
     this.id = generateID();
+    this.displayName = undefined;
   }
 
   doMovement(dt) {
@@ -63,21 +64,33 @@ class EntityBase {
 
   render(pos) {
     renderer.save();
-    
     renderer.translate(pos);
+
+    renderer.save();
+
     renderer.rotate(this.dir);
     renderer.translate(this.size._mul(-0.5));
     renderer.image(tex[this.texture], vecZero, this.size);
+
+    renderer.restore();
+
+    if (this.displayName && this.type != "EntityPlayer") {
+      renderer.set("font", "0.3px monospace");
+      renderer.set("fill", "rgb(255, 255, 255)");
+      renderer.set("textAlign", ["center", "bottom"]);
+      renderer.text(this.displayName, new Vec(0, -this.size.y / 2));
+    }
 
     renderer.restore();
   }
 
   from(data) {
     if (data.pos) this.pos = new Vec().from(data.pos); else this.pos = new Vec(0, 0);
-    if (data.dir) this.dir = data.dir; else this.dir = 0;
+    if (data.dir) this.dir = data.dir;
     if (data.id) this.id = data.id; else this.id = generateID();
-    if (data.slots) this.slots = data.slots; else this.slots = [];
-    if (data.slot) this.slot = data.slot; else this.slot = 0;
+    if (data.slots) this.slots = data.slots;
+    if (data.slot) this.slot = data.slot;
+    if (data.displayName) this.displayName = data.displayName;
 
     return this;
   }

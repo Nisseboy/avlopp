@@ -55,7 +55,7 @@ class LightBase {
       mask.ctx.drawImage(this.tex.canvas, -size.x / 2 + 1, -size.y / 2 + 1, size.x - 2, size.y- 2);
 
       mask.ctx.globalCompositeOperation = "multiply";
-      mask.ctx.filter = `brightness(${this.strength * 100}%)`;
+      mask.ctx.filter = `brightness(${this.strength * (settings.brightness / 100) * 100}%)`;
       mask.ctx.drawImage(this.tex.canvas, -size.x / 2, -size.y / 2, size.x, size.y);
 
 

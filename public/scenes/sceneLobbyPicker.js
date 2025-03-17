@@ -15,10 +15,18 @@ class SceneLobbyPicker extends Scene {
       hover: {text: {fill: [255, 0, 0]}}
     };
     this.buttons = [
-      new ButtonText(new Vec(50, 50), "Create Lobby", buttonStyle, {mousedown: [function () {
+      new ButtonText(new Vec(50, 50), "Name: " + playerName, buttonStyle, {mousedown: [() => {
+        let newName = prompt("New name?");
+        if (newName == "" || newName == null) return;
+
+        playerName = newName;
+        localStorage.setItem("avloppName", playerName);
+        this.buttons[0].text = "Name: " + playerName;
+      }]}),
+      new ButtonText(new Vec(50, 250), "Create Lobby", buttonStyle, {mousedown: [function () {
         document.location.href = generateID();
-    }]}),
-      new ButtonText(new Vec(50, 150), "Join Lobby", buttonStyle, {mousedown: [function () {
+      }]}),
+      new ButtonText(new Vec(50, 350), "Join Lobby", buttonStyle, {mousedown: [function () {
         let lobbyCode = prompt("Lobby code");
 
         document.location.href = lobbyCode;

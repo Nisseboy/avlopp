@@ -15,7 +15,7 @@ class SceneMainMenu extends Scene {
       hover: {text: {fill: [255, 0, 0]}}
     };
     this.buttons = [
-      new ButtonText(new Vec(50, 50), "Exit Lobby", buttonStyle, {mousedown: [function () {
+      new ButtonText(new Vec(50, 50), "Exit Lobby: " + lobby, buttonStyle, {mousedown: [function () {
         document.location = document.location.href.substring(0, document.location.href.lastIndexOf('/'));
       }]}),
       new ButtonText(new Vec(50, 250), "Enter", buttonStyle, {mousedown: [function () {

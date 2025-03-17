@@ -23,4 +23,6 @@ if (global) {
   global.constants = constants;
   global.generateID = generateID;
   global.vecZero = vecZero;
+  global.vecHalf = vecHalf;
+  global.vecOne = vecOne;
 }
