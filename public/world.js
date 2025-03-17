@@ -310,7 +310,7 @@ class World {
       let ny = this.lineFuncY(startPosx, startPosy, dirx, diry, a);
       let nx = this.lineFuncX(startPosx, startPosy, dirx, diry, b);
 
-      if (nx * signx > fx(posx + small * signx) * signx) { 
+      if (nx * signx > a * signx) { 
         posx = a;
         posy = ny;
         //uv = ny % 1;

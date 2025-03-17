@@ -59,7 +59,7 @@ class SceneSettings extends Scene {
         visibilitySamples:  {type: SettingRange,     args: {min: 200, max: 10000, default: 1000, step: 100}, name: "Visibility rays"},
         renderResolution:   {type: SettingRange,     args: {min: 25, max: 100, default: 100, step: 1},       name: "Render Resolution", events: {change: [e=>{window.dispatchEvent(new Event('resize'));}]}},
         lightingEnabled:    {type: SettingCheckbox,  args: {default: true},                                  name: "Lighting Enabled", style: {size: new Vec(50, 50)}},
-        brightness:         {type: SettingRange,     args: {min: 0, max: 200, default: 100, step: 1},      name: "Brightness"},
+        brightness:         {type: SettingRange,     args: {min: 0, max: 200, default: 100, step: 1},        name: "Brightness", events: {change: [() => {for (let l of world.lights) l.oldDir = undefined;}]}},
       }, {
         change: [function (value) {
           localStorage.setItem("avloppSettings", JSON.stringify(settings));

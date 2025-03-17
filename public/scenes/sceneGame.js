@@ -242,7 +242,6 @@ class SceneGame extends Scene {
     //Move player light and cam to player
     this.cam.pos.from(player.pos);
     world.lights[0].pos.from(player.pos);
-    world.lights[0].cached = false;
 
 
     //Find closest item to player;

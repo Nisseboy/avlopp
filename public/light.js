@@ -7,9 +7,11 @@ class LightBase {
     this.size = size;
     this.strength = strength;
 
+    this.oldPos = new Vec(0, 0);
+    this.oldDir = 0;
+
     this.tex = undefined;
     this.cachedLightTexture = undefined;
-    this.cached = false;
   }
 
   render(pos, lightingTexture) {
@@ -19,7 +21,7 @@ class LightBase {
     }
     if (this.cachedLightTexture.size.x != renderer.img.size.x) {
       this.cachedLightTexture.resize(new Vec(renderer.img.size.x, renderer.img.size.x));
-      this.cached = false;
+      this.oldDir = undefined;
     }
 
     let cam = scenes.game.cam;
@@ -29,7 +31,7 @@ class LightBase {
 
     img.ctx.setTransform(renderer.img.ctx.getTransform());
 
-    if (!this.cached) {
+    if (this.oldPos.x != this.pos.x || this.oldPos.y != this.pos.y || this.oldDir != this.dir) {
       renderer.save();
       renderer.translate(cam.pos._subV(pos));
 
@@ -60,10 +62,9 @@ class LightBase {
 
 
       mask.ctx.restore();
-
-
-
-      this.cached = true;
+      
+      this.oldPos.from(this.pos);
+      this.oldDir = this.dir;
     }
     
 
@@ -170,15 +171,12 @@ function createVisibilityMask(visibilityMaskTexture, pos, maxLength = 10000, tra
   img.ctx.strokeStyle = "rgb(255, 255, 255)";
   img.ctx.lineWidth = 0.3;
   img.ctx.beginPath();
-  for (let i = 0; i < settings.visibilitySamples; i++) {
-    let hitInfo = world.raycast(pos, i / settings.visibilitySamples * Math.PI * 2, true, false, maxLength);
+  let full = Math.PI * 2;
+  let step = full / settings.visibilitySamples;
+  for (let i = 0; i < full; i += step) {
+    let hitInfo = world.raycast(pos, i, true, false, maxLength);
 
     img.ctx.lineTo(hitInfo.hitPos.x, hitInfo.hitPos.y);
-
-    /*if (!hitInfo.hit) 
-      img.ctx.fillStyle = `rgb(255, 0, 0)`
-    img.ctx.fillRect(hitInfo.hitPos.x, hitInfo.hitPos.y, 0.1, 0.1);
-    img.ctx.fillStyle = `rgb(255, 255, 255)`*/
   }
   img.ctx.fill();
   img.ctx.stroke();

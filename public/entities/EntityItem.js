@@ -88,7 +88,6 @@ class EntityItemFlashlight extends EntityItemToggle {
     if (this.light != undefined) {
       this.light.pos = this.pos._addV(new Vec(Math.cos(this.dir), Math.sin(this.dir)).mul(0.15));
       this.light.dir = this.dir;
-      this.light.cached = false;
     }
   }
   
