@@ -19,12 +19,10 @@ class SceneLobbyPicker extends Scene {
         nde.transition = new TransitionSlide(scenes.character, new TimerTime(0.2));
       }]}),
       new ButtonText(new Vec(50, 250), "Create Lobby", buttonStyle, {mousedown: [function () {
-        document.location.href = generateID();
+        nde.transition = new TransitionSlide(scenes.lobbyCreator, new TimerTime(0.2));
       }]}),
       new ButtonText(new Vec(50, 350), "Join Lobby", buttonStyle, {mousedown: [function () {
-        let lobbyCode = prompt("Lobby code");
-
-        document.location.href = lobbyCode;
+        gotoLobbyFinder();
       }]}),
     ];
   }

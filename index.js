@@ -51,13 +51,68 @@ async function start() {
   io.on("connection", (socket) => {
     let lobby;
     let player;
+
+    socket.on("create lobby", data => {
+      let code;
+      let mult = 10000;
+      let tries = 0;
+      while (true) {
+        code = Math.floor(Math.random() * mult);
+        if (lobbies[code]) {
+          tries++;
+          if (tries == 100) {
+            tries = 0;
+            mult *= 10;
+          }
+          continue;
+        }
+
+        break;
+      }
+
+      data.lobby = code;
+
+      let lobby = createLobby(data);
+      
+      socket.emit("create lobby", {
+        lobbyId: lobby.lobbyId,
+      });            
+    });
+
+    socket.on("get lobbies", data => {
+      let foundLobbies = [];
+      for (let i in lobbies) {
+        let lobby = lobbies[i];      
+        if (!lobby.public) continue;
+
+        let playerCount = Object.keys(lobby.sockets).length;
+        if (playerCount == lobby.maxPlayers) continue;
+
+        foundLobbies.push({lobbyId: lobby.lobbyId, playerCount: playerCount, maxPlayers: lobby.maxPlayers});
+      }
+
+      foundLobbies.sort((a,b)=>{return b.playerCount - a.playerCount});
+      
+      socket.emit("get lobbies", {
+        lobbies: foundLobbies,
+      });            
+    });
   
     socket.on("join", (data) => {
       if (data.lobby != parseFloat(data.lobby)) return;
   
       lobby = lobbies[data.lobby];
       if (lobby == undefined) {
-        lobby = createLobby(data.lobby);
+        socket.emit("exit", {
+          reason: "No lobby exists with that code",
+        });
+        return;
+      }
+      if (Object.keys(lobby.sockets).length >= lobby.maxPlayers) {
+        socket.emit("exit", {
+          reason: "Lobby full",
+        });
+        return;
       }
   
       player = new EntityPlayer(lobby.world.size._div(2), "EntityPlayer");
@@ -154,9 +209,12 @@ async function start() {
   });
   
   
-  function createLobby(lobbyId) {
+  function createLobby(data) {
     let lobby = {
-      lobbyId: lobbyId,
+      lobbyId: data.lobby,
+      public: data.public,
+      maxPlayers: data.maxPlayers,
+
       world: new World().random(),
       sockets: {},
       events: {},
@@ -168,8 +226,8 @@ async function start() {
       if (Object.keys(lobby.sockets).length == 0) {
         if (lobby.offlineTime >= constants.lobbyDeleteTime) {
           clearInterval(interval);
-          delete lobbies[lobbyId];
-          console.log(`${lobbyId}: Lobby deleted`);
+          delete lobbies[lobby.lobbyId];
+          console.log(`${lobby.lobbyId}: Lobby deleted`);
           return;
         } else {
           lobby.offlineTime += constants.updateInterval;
@@ -192,11 +250,17 @@ async function start() {
       }
     }, constants.updateInterval);
   
-    lobbies[lobbyId] = lobby;
+    lobbies[lobby.lobbyId] = lobby;
   
-    console.log(`${lobbyId}: Lobby created`);
+    console.log(`${lobby.lobbyId}: Lobby created`);
     return lobby;
   }
+
+  /*for (let i = 0; i < 10; i++) {
+    createLobby({lobby: i, public: Math.random() < 0.5, maxPlayers: 8});
+  }*/
+ 
+    createLobby({lobby: 0, public: true, maxPlayers: 8});
 }
 start();
 

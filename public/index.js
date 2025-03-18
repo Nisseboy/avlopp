@@ -63,6 +63,8 @@ document.body.onload = e => {
     game: new SceneGame(), 
     mainMenu: new SceneMainMenu(),
     lobbyPicker: new SceneLobbyPicker(),
+    lobbyCreator: new SceneLobbyCreator(),
+    lobbyFinder: new SceneLobbyFinder(),
     loading: new SceneLoading(),
     settings: new SceneSettings(),
     roomPicker: new SceneRoomPicker(),
@@ -76,13 +78,14 @@ document.body.onload = e => {
   nde.registerEvent("afterSetup", () => {
     lobby = document.location.pathname.split("/")[1];
   
+    socket = io(window.location.origin);
+
     if (lobby == "") {
       nde.setScene(scenes.lobbyPicker);
     } else {
       nde.setScene(scenes.loading);
       
 
-      socket = io(window.location.origin);
 
       let oldId = localStorage.getItem("id") || 0;
 
@@ -122,6 +125,10 @@ document.body.onload = e => {
           scenes.game.loadWorld(new World().from(data.world));
           nde.setScene(scenes.mainMenu);          
         }, 16);
+      });
+      socket.on("exit", (data) => {
+        alert(data.reason);
+        document.location = document.location.href.substring(0, document.location.href.lastIndexOf('/'));
       });
     }
   });
