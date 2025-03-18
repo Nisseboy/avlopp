@@ -15,13 +15,8 @@ class SceneLobbyPicker extends Scene {
       hover: {text: {fill: [255, 0, 0]}}
     };
     this.buttons = [
-      new ButtonText(new Vec(50, 50), "Name: " + playerName, buttonStyle, {mousedown: [() => {
-        let newName = prompt("New name?");
-        if (newName == "" || newName == null) return;
-
-        playerName = newName;
-        localStorage.setItem("avloppName", playerName);
-        this.buttons[0].text = "Name: " + playerName;
+      new ButtonText(new Vec(50, 50), "Customize Character", buttonStyle, {mousedown: [() => {
+        nde.transition = new TransitionSlide(scenes.character, new TimerTime(0.2));
       }]}),
       new ButtonText(new Vec(50, 250), "Create Lobby", buttonStyle, {mousedown: [function () {
         document.location.href = generateID();

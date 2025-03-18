@@ -69,6 +69,7 @@ async function start() {
       }
 
       player.displayName = data.name;
+      player.color = new Vec().from(data.color);
 
       lobby.world.entities.push(player);
   

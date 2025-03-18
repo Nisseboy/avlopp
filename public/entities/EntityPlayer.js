@@ -19,6 +19,16 @@ class EntityPlayer extends EntityBase {
     this.footDist = 0.6;
     this.feet = [{pos: vecZero.copy(), offset: new Vec(0, -0.2), dir: this.dir}, {pos: vecZero.copy(), offset: new Vec(0, 0.2), dir: this.dir}];
     this.feetAudio = ["duck/step/1","duck/step/2","duck/step/3","duck/step/4"];
+
+    this.color = undefined;
+  }
+
+  from(data) {
+    super.from(data);
+
+    if (data.color) this.color = new Vec().from(data.color); else this.color = new Vec(255, 0, 255);
+ 
+    return this;
   }
 
   doMovement(dt) {

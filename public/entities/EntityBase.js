@@ -76,7 +76,8 @@ class EntityBase {
 
     if (this.displayName && this.type != "EntityPlayer") {
       renderer.set("font", "0.3px monospace");
-      renderer.set("fill", "rgb(255, 255, 255)");
+      if (this.color) renderer.set("fill", this.color);
+      else renderer.set("fill", "rgb(255, 255, 255)");
       renderer.set("textAlign", ["center", "bottom"]);
       renderer.text(this.displayName, new Vec(0, -this.size.y / 2));
     }

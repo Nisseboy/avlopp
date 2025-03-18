@@ -16,7 +16,7 @@ let aud = {};
 let events = [];
 
 let settings = JSON.parse(localStorage.getItem("avloppSettings")) || {};
-let playerName = localStorage.getItem("avloppName") || "Unnamed";
+let characterSettings = JSON.parse(localStorage.getItem("characterSettings")) || {};
 
 
 
@@ -66,6 +66,7 @@ document.body.onload = e => {
     loading: new SceneLoading(),
     settings: new SceneSettings(),
     roomPicker: new SceneRoomPicker(),
+    character: new SceneCharacter(),
   };
 
   nde.registerEvent("keydown", e => {
@@ -85,7 +86,7 @@ document.body.onload = e => {
 
       let oldId = localStorage.getItem("id") || 0;
 
-      socket.emit("join", {lobby: lobby, id: oldId, name: playerName});
+      socket.emit("join", {lobby: lobby, id: oldId, name: characterSettings.name, color: new Vec(characterSettings.r, characterSettings.g, characterSettings.b)});
       socket.on("join", (data) => {
         id = data.id;
 
