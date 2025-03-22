@@ -31,8 +31,8 @@ class EntityPlayer extends EntityBase {
     return this;
   }
 
-  doMovement(dt) {
-    let moved = super.doMovement(dt);
+  move(movement, dt) {
+    let moved = super.move(movement, dt);
 
     if (moved) {
       emitEvent({action: "move", pos: this.pos});
@@ -44,8 +44,6 @@ class EntityPlayer extends EntityBase {
 
   }
   clientUpdate(dt) {
-    this.doMovement(dt);
-
     this.updateFeet(dt);
     
     this.hoveredItem = undefined;

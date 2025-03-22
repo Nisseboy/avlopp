@@ -25,7 +25,9 @@ class SceneGame extends Scene {
     world = w;
     
     //Player light
-    world.lights.push(new LightPoint(new Vec(8, 4.5), new Vec(8, 8), 0.3));
+    let playerLight = new LightPoint(new Vec(8, 4.5), new Vec(8, 8), 0.3);
+    playerLight.ignoreWalls = true;
+    world.lights.push(playerLight);
 
     world.objects.forEach(object => {object.load()});
 
@@ -194,11 +196,11 @@ class SceneGame extends Scene {
   }
 
   update(dt) {    
-    player.movement = new Vec(
+    player.speedMult = nde.getKeyPressed("Run") ? 2 : 1;
+    player.move(new Vec(
       nde.getKeyPressed("Move Right") - nde.getKeyPressed("Move Left"),
       nde.getKeyPressed("Move Down") - nde.getKeyPressed("Move Up"),
-    ).normalize();
-    player.speedMult = nde.getKeyPressed("Run") ? 2 : 1;
+    ).normalize().mul(player.speed * player.speedMult), dt);
 
 
     //Update all the entities
@@ -378,7 +380,7 @@ class SceneGame extends Scene {
       nde.debugStats.renderedLights = renderedLights;
       
   
-      createVisibilityMask(this.visibilityMaskTexture, cam.pos, cam.w *0.6);
+      createVisibilityMask(this.visibilityMaskTexture, cam.pos, 0, Math.PI * 2, cam.w *0.6);
       renderer.image(this.visibilityMaskTexture, cam.pos._subV(camSize._div(2)), camSize);
     }
     renderer.restore();

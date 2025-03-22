@@ -12,6 +12,10 @@ class LightBase {
 
     this.tex = undefined;
     this.cachedLightTexture = undefined;
+
+    this.ignoreWalls = false;
+
+    this.fov = Math.PI * 2;
   }
 
   render(pos, lightingTexture) {
@@ -39,7 +43,7 @@ class LightBase {
       //mask.ctx.translate(0, (renderer.img.size.x - renderer.img.size.y) / 2);
       
       mask.ctx.translate(0, 3.5); //(16, 9) -> (16, 16)   (+0*2, +3.5*2)
-      createVisibilityMask(mask, pos, Math.max(this.size.x, this.size.y) / 2, true);
+      if (!this.ignoreWalls) createVisibilityMask(mask, pos, this.dir, this.fov, Math.max(this.size.x, this.size.y) / 2, true);
       renderer.restore();
 
       
@@ -50,6 +54,10 @@ class LightBase {
       let size = mask.size._div(cam.w).mulV(this.size);      
       
       mask.ctx.resetTransform();
+      if (this.ignoreWalls) {
+        mask.ctx.fillStyle = "rgb(255, 255, 255)";
+        mask.ctx.fillRect(0, 0, mask.size.x, mask.size.y);
+      }
       mask.ctx.translate(mask.size.x / 2, mask.size.y / 2);
       mask.ctx.rotate(this.dir);
 
@@ -92,6 +100,8 @@ class LightBeam extends LightBase {
     super(pos, size, strength);
     
     this.tex = lightBeamTexture;
+
+    this.fov = Math.PI / 4;
   }
 }
 
@@ -160,7 +170,7 @@ function createLightBeam(size, color, strength, fov) {
 }
 
 
-function createVisibilityMask(visibilityMaskTexture, pos, maxLength = 10000, transformOverride = false) {  
+function createVisibilityMask(visibilityMaskTexture, pos, dir, fov, maxLength, transformOverride = false) {  
   let img = visibilityMaskTexture;
   img.ctx.fillStyle = "rgb(0, 0, 0)";
   img.ctx.fillRect(0, 0, img.size.x, img.size.y);
@@ -171,13 +181,18 @@ function createVisibilityMask(visibilityMaskTexture, pos, maxLength = 10000, tra
   img.ctx.strokeStyle = "rgb(255, 255, 255)";
   img.ctx.lineWidth = 0.3;
   img.ctx.beginPath();
+  
   let full = Math.PI * 2;
   let step = full / settings.visibilitySamples;
   for (let i = 0; i < full; i += step) {
+    if (getDeltaAngle(i, dir) > fov / 2) continue;
+
     let hitInfo = world.raycast(pos, i, true, false, maxLength);
 
     img.ctx.lineTo(hitInfo.hitPos.x, hitInfo.hitPos.y);
   }
+  
+  
   img.ctx.fill();
   img.ctx.stroke();
 

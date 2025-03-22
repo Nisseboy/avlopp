@@ -284,10 +284,12 @@ class World {
   raycast(startPos, angle, ignoreSolid, ignoreOpaque, maxLength = 10000) {
     let dirx = Math.cos(angle);
     let diry = Math.sin(angle);
-    if (dirx == 0) dirx = 0.001;
-    if (diry == 0) diry = 0.001;
 
     let small = 0.0000000001;
+
+    if (dirx == 0) dirx = small;
+    if (diry == 0) diry = small;
+
 
     let startPosx = startPos.x;
     let startPosy = startPos.y;

@@ -3,7 +3,6 @@ class EntityBase {
     this.pos = pos;
     this.dir = 0;
     this.speedMult = 1;
-    this.movement = new Vec(0, 0);
 
     
     this.type = type;
@@ -21,11 +20,11 @@ class EntityBase {
     this.displayName = undefined;
   }
 
-  doMovement(dt) {
-    if (this.movement.sqMag() < 0.01) return false;
+  move(movement, dt) {
+    if (movement.sqMag() < 0.01) return false;
 
 
-    let delta = this.movement._mul(this.speed * this.speedMult * dt);
+    let delta = movement._mul(dt);
 
     let hitInfo;
 
@@ -40,7 +39,7 @@ class EntityBase {
     this.pos.y += delta.y;
 
 
-    let diff = getDeltaAngle((Math.atan2(this.movement.y, this.movement.x)), this.dir);
+    let diff = getDeltaAngle((Math.atan2(movement.y, movement.x)), this.dir);
     this.dir -= diff * 10 * dt;
 
     return delta.x != 0 || delta.y != 0;
@@ -53,7 +52,7 @@ class EntityBase {
   }
 
   serverUpdate(dt) {
-    this.doMovement(dt);
+
   }
   clientUpdate(dt) {
 
@@ -107,26 +106,6 @@ class EntityBase {
 }
 
 
-/*
-
-this.stepCooldown = undefined;
-this.currentStepCooldown = undefined;
-
-
-doMovement(dt) {
-  if (this.movement.sqMag() > 0 && this.currentStepCooldown <= 0) {
-    let mag = this.movement.mag();
-
-    this.dir = Math.atan2(this.movement.y, this.movement.x) + ((Math.random() - 0.5) * 0.5 * mag);
-    
-    this.pos.addV(new Vec(Math.cos(this.dir), Math.sin(this.dir)).mul(this.speed * this.stepCooldown * mag));
-    
-    this.currentStepCooldown = this.stepCooldown;
-  }
-  
-  this.currentStepCooldown -= dt * this.speedMult;
-}
-*/
 
 
 
