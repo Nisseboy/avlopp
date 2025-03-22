@@ -11,61 +11,119 @@ class SceneSettings extends Scene {
 
   start() {
     let buttonStyle = {
-      padding: 10, 
+      minSize: new Vec(50, 50),
 
-      text: {font: "50px monospace", fill: "rgb(255, 255, 255)"}, 
-      hover: {text: {fill: "rgb(255, 0, 0)"}}
+      padding: 10,
+
+      fill: "rgb(0, 0, 0)",
+
+      text: {font: "50px monospace"},
+
+      hover: {
+        text: {fill: "rgb(255, 0, 0)"},
+
+        checkbox: {checked: {
+          fill: "rgb(255, 0, 0)",
+          stroke: "rgb(255, 0, 0)",
+        }},
+
+        slider: { active: {
+          fill: "rgb(255, 0, 0)",
+          stroke: "rgb(255, 0, 0)",
+        }},
+      },
     };
 
+    this.ui = new UIRoot({
+      pos: new Vec(50, 50),
 
-    let settingCollectionStyle = {
-      size: new Vec(500, 50),
-      gap: 10,
-      settingXOffset: 600,
 
-      text: {
-        font: "50px monospace",
+      style: {
+        direction: "column",
+
+        gap: 10,
       },
 
-      setting: {
-        padding: 10,
+      children: [
+        new UIButtonText({
+          text: "Back",
 
-        range: {
-          text: {
-            width: 140,
-          },
-        },
-        
-        hover: { 
-          stroke: "rgba(255, 0, 0, 1)", 
-          checkbox: {
-            stroke: "rgba(255, 0, 0, 1)", 
-            fill: "rgba(255, 0, 0, 1)"
-          },
-          range: {
-            fill: "rgba(255, 0, 0, 1)", 
-            stroke: "rgba(255, 0, 0, 1)",
-          },
-        },
-      }
-    };
-    
-    this.buttons = [
-      new ButtonText(new Vec(50, 50), "Back", buttonStyle, {mousedown: [function () {
-        nde.transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
-      }]}),
+          style: {...buttonStyle},
+          textStyle: {...buttonStyle},
 
-      new SettingCollection(new Vec(50, 150), settings, settingCollectionStyle, {
-        visibilitySamples:  {type: SettingRange,     args: {min: 200, max: 10000, default: 1000, step: 100}, name: "Visibility rays"},
-        renderResolution:   {type: SettingRange,     args: {min: 25, max: 100, default: 100, step: 1},       name: "Render Resolution", events: {change: [e=>{window.dispatchEvent(new Event('resize'));}]}},
-        lightingEnabled:    {type: SettingCheckbox,  args: {default: true},                                  name: "Lighting Enabled", style: {size: new Vec(50, 50)}},
-        brightness:         {type: SettingRange,     args: {min: 0, max: 200, default: 100, step: 1},        name: "Brightness", events: {change: [() => {for (let l of world.lights) l.oldDir = undefined;}]}},
-      }, {
-        change: [function (value) {
-          localStorage.setItem("avloppSettings", JSON.stringify(settings));
-        }],
-      }),
-    ];
+          events: {mousedown: [() => {
+            nde.transition = new TransitionSlide(scenes.mainMenu, new TimerTime(0.2));
+          }]},
+        }),
+
+        new UISettingCollection({
+          value: settings,
+          hasLabels: true,
+
+          style: {
+            gap: 10,
+
+            row: {
+              gap: 10,
+            },
+            label: {...buttonStyle,
+            },
+          },
+
+          children: [
+            new UISettingRange({
+              name: "renderResolution", displayName: "Render Resolution",
+              value: 100,
+              min: 25, max: 100, step: 1,
+
+              style: {...buttonStyle,
+
+              },
+
+              events: {
+                change: [e=>{window.dispatchEvent(new Event('resize'));}]
+              },
+            }),
+            
+            new UISettingRange({
+              name: "visibilitySamples", displayName: "Visibility Rays",
+              value: 1000,
+              min: 200, max: 10000, step: 100,
+
+              style: {...buttonStyle,
+
+              }
+            }),
+
+            new UISettingCheckbox({
+              name: "lightingEnabled", displayName: "Lighting Enabled",
+              value: true,
+
+              style: {...buttonStyle,
+              }
+            }),
+            
+            new UISettingRange({
+              name: "brightness", displayName: "Brightness",
+              value: 100,
+              min: 10, max: 200, step: 1,
+
+              style: {...buttonStyle,
+
+              },
+
+              events: {change: [() => {for (let l of world.lights) l.oldDir = undefined;}]}
+            }),
+          ],
+
+          events: {
+            change: [function (value) {
+              localStorage.setItem("avloppSettings", JSON.stringify(settings));      
+            }],
+          },
+        }),
+      ],
+    });    
   }
 
   keydown(e) {
@@ -99,7 +157,7 @@ class SceneSettings extends Scene {
     cam.applyTransform();
     renderer.set("lineWidth", cam.unScaleVec(new Vec(1)).x);
 
-    this.buttons.forEach(e => e.render());
+    this.ui.renderUI();
 
     renderer.restore();
   }

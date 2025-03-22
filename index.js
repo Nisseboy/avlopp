@@ -224,7 +224,7 @@ async function start() {
   
     let interval = setInterval(() => {
       if (Object.keys(lobby.sockets).length == 0) {
-        if (lobby.offlineTime >= constants.lobbyDeleteTime) {
+        if (lobby.offlineTime >= constants.lobbyDeleteTime && !data.infinite) {
           clearInterval(interval);
           delete lobbies[lobby.lobbyId];
           console.log(`${lobby.lobbyId}: Lobby deleted`);
@@ -260,7 +260,7 @@ async function start() {
     createLobby({lobby: i, public: Math.random() < 0.5, maxPlayers: 8});
   }*/
  
-    createLobby({lobby: 0, public: true, maxPlayers: 8});
+  createLobby({lobby: 0, public: true, maxPlayers: 8, infinite: true});
 }
 start();
 

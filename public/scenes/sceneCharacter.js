@@ -10,74 +10,135 @@ class SceneCharacter extends Scene {
   }
 
   start() {
-    let buttonStyle = {
-      padding: 10, 
-
-      text: {font: "50px monospace", fill: "rgb(255, 255, 255)"}, 
-      hover: {text: {fill: "rgb(255, 0, 0)"}}
-    };
-
-
-    let settingCollectionStyle = {
-      size: new Vec(500, 50),
-      gap: 10,
-      settingXOffset: 600,
-
-      text: {
-        font: "50px monospace",
-      },
-
-      setting: {
-        padding: 10,
-
-        range: {
-          text: {
-            width: 140,
-          },
-        },
-        
-        hover: { 
-          stroke: "rgba(255, 0, 0, 1)", 
-          checkbox: {
-            stroke: "rgba(255, 0, 0, 1)", 
-            fill: "rgba(255, 0, 0, 1)"
-          },
-          range: {
-            fill: "rgba(255, 0, 0, 1)", 
-            stroke: "rgba(255, 0, 0, 1)",
-          },
-        },
-      }
-    };
-
     if (characterSettings.name == undefined) characterSettings.name = "Unnamed";
     
-    this.buttons = [
-      new ButtonText(new Vec(50, 50), "Back", buttonStyle, {mousedown: [function () {
-        nde.transition = new TransitionSlide(scenes.lobbyPicker, new TimerTime(0.2));
-      }]}),
+    let buttonStyle = {
+      minSize: new Vec(50, 50),
 
-      new ButtonText(new Vec(50, 150), "Name: " + characterSettings.name, buttonStyle, {mousedown: [() => {
-        let newName = prompt("New name?");
-        if (newName == "" || newName == null) return;
+      padding: 10,
 
-        characterSettings.name = newName;
-        localStorage.setItem("avloppName", newName);
-        this.buttons[1].text = "Name: " + newName;
+      fill: "rgb(0, 0, 0)",
+
+      text: {font: "50px monospace"},
+
+      hover: {
+        text: {fill: "rgb(255, 0, 0)"},
+
+        checkbox: {checked: {
+          fill: "rgb(255, 0, 0)",
+          stroke: "rgb(255, 0, 0)",
+        }},
+
+        slider: { active: {
+          fill: "rgb(255, 0, 0)",
+          stroke: "rgb(255, 0, 0)",
+        }},
+      },
+    };
+
+    this.ui = new UIRoot({
+      pos: new Vec(50, 50),
+
+
+      style: {
+        direction: "column",
+
+        gap: 10,
+      },
+
+      children: [
+        new UIButtonText({
+          text: "Back",
+
+          style: {...buttonStyle},
+          textStyle: {...buttonStyle},
+
+          events: {mousedown: [() => {
+            nde.transition = new TransitionSlide(scenes.lobbyPicker, new TimerTime(0.2));
+          }]},
+        }),
+
+        new UISettingCollection({
+          value: characterSettings,
+          hasLabels: true,
+
+          style: {
+            gap: 10,
+
+            row: {
+              gap: 10,
+            },
+            label: {...buttonStyle,
+            },
+          },
+
+          children: [
+            
+            new UIButtonText({
+              text: "Name: " + characterSettings.name,
+
+              style: {...buttonStyle},
+              textStyle: {...buttonStyle},
+
+              events: {mousedown: [() => {
+                let newName = prompt("New name?");
+                if (newName == "" || newName == null) return;
         
-        localStorage.setItem("characterSettings", JSON.stringify(characterSettings));
-      }]}),
+                characterSettings.name = newName;
+                localStorage.setItem("avloppName", newName);
+                this.ui.children[1].children[0].children[0].children[0].text = "Name: " + newName;
+                this.ui.initUI();
+                
+                
+                localStorage.setItem("characterSettings", JSON.stringify(characterSettings));
+              }]},
+            }),
+            
+            new UISettingRange({
+              name: "r", displayName: "Color R",
+              value: 19,
+              min: 0, max: 255, step: 1,
 
-      new SettingCollection(new Vec(50, 250), characterSettings, settingCollectionStyle, {
-        r:        {type: SettingRange,    name: "Color R",         args: {default: 255, min: 0, max: 255}},
-        g:        {type: SettingRange,    name: "Color G",         args: {default: 255, min: 0, max: 255}, style: {setting: {hover: {range: {fill: "rgba(0, 255, 0, 1)", stroke: "rgba(0, 255, 0, 1)"}}}}},
-        b:        {type: SettingRange,    name: "Color B",         args: {default: 255, min: 0, max: 255}, style: {setting: {hover: {range: {fill: "rgba(0, 0, 255, 1)", stroke: "rgba(0, 0, 255, 1)"}}}}},
-      }, {
-        change: [function (value) {
-          localStorage.setItem("characterSettings", JSON.stringify(characterSettings));
-        }],
-      }),
-    ];
+              style: {...buttonStyle,
+
+              }
+            }),
+            new UISettingRange({
+              name: "g", displayName: "Color G",
+              value: 19,
+              min: 0, max: 255, step: 1,
+
+              style: {...buttonStyle,
+
+                hover: {slider: { active: {
+                  fill: "rgb(0, 255, 0)",
+                  stroke: "rgb(0, 255, 0)",
+                }}},
+              }
+            }),
+            new UISettingRange({
+              name: "b", displayName: "Color B",
+              value: 19,
+              min: 0, max: 255, step: 1,
+
+              style: {...buttonStyle,
+
+                hover: {slider: { active: {
+                  fill: "rgb(0, 0, 255)",
+                  stroke: "rgb(0, 0, 255)",
+                }}},
+              }
+            }),
+          ],
+
+          events: {
+            change: [function (value) {
+              localStorage.setItem("characterSettings", JSON.stringify(characterSettings));      
+            }],
+          },
+        }),
+      ],
+    });    
   }
 
   keydown(e) {
@@ -111,7 +172,8 @@ class SceneCharacter extends Scene {
     cam.applyTransform();
     renderer.set("lineWidth", cam.unScaleVec(new Vec(1)).x);
 
-    this.buttons.forEach(e => e.render());
+    //this.buttons.forEach(e => e.render());
+    this.ui.renderUI();
 
     renderer.restore();
   }

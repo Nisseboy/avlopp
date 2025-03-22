@@ -709,7 +709,13 @@ class RendererCanvas extends RendererBase {
   }
 
   measureText(text) {
-    return this.img.ctx.measureText(text);
+    text = text + "";
+
+    let size = this.img.ctx.measureText(text);
+
+    let lines = text.split("\n").length;
+    
+    return new Vec(size.width, (size.fontBoundingBoxAscent + size.fontBoundingBoxDescent) * lines);
   }
 
   getTransform() {
@@ -740,7 +746,18 @@ class RendererCanvas extends RendererBase {
   }
 
   text(t, pos) {
-    this.img.ctx.fillText(t, pos.x, pos.y);    
+    t = t + "";
+
+    let lines = t.split("\n");
+    let y = 0;
+    let step = 0;
+
+    if (lines.length > 1) step = this.measureText(lines[0]).y;
+    
+    for (let l of lines) {
+      this.img.ctx.fillText(l, pos.x, pos.y + y);   
+      y += step;
+    } 
   }
 
   image(img, pos, size) {
@@ -756,36 +773,51 @@ class RendererCanvas extends RendererBase {
 
 
 
-/* src/ui/UIElementBase.js */
-class UIElementBase {
-  constructor(pos, size, events) {
-    this.pos = pos;
-    this.size = size;
-    this.events = events;
+/* src/ui/UIBase.js */
+let defaultStyle = {
+  minSize: new Vec(0, 0),
+  growX: false,
+  growY: false,
 
+  align: new Vec(0, 0), //0: left, 1: center, 2: right,    0: top, 1: middle, 2: bottom
+
+  padding: 0,
+
+  direction: "row",
+  gap: 0,
+
+  fill: "rgba(0, 0, 0, 0)",
+  stroke: "rgba(0, 0, 0, 0)",
+}
+
+class UIBase {
+  constructor(props) {
+    this.defaultStyle = {};
+    this.style = undefined;
+
+    this.fillStyle(props.style);
+
+    this.children = props.children || [];
+    this.events = props.events || {};
+
+    this.interactable = false;
+    
     this.hovered = false;
-    this.forceHover = false;
-
-    this.defaultStyle = {
-      padding: 0,
-
-      fill: "rgba(0, 0, 0, 1)",
-      stroke: "rgba(0, 0, 0, 1)",
-    };
-
-    this.style = {hover: {}};
-  }
-
-  fillStyle(style) {
-    nestedObjectAssign(this.style, this.defaultStyle, style);
-
-    delete this.style.hover;
-    this.style.hover = nestedObjectAssign({}, this.style, style.hover);
+    this.pos = new Vec(0, 0);
+    this.size = new Vec(1, 1);
   }
 
   registerEvent(eventName, func) {
     if (!this.events[eventName]) this.events[eventName] = [];
     this.events[eventName].push(func);
+  }
+  unregisterEvent(eventName, func) {
+    let events = this.events[eventName];
+    if (!events) return;
+    let index = events.indexOf(func);
+    if (index == -1) return;
+
+    events.splice(index, 1);
   }
   fireEvent(eventName, ...args) {    
     let events = this.events[eventName];
@@ -793,28 +825,184 @@ class UIElementBase {
       for (let e of events) e(...args);
   }
 
-  checkHovered() {
-    this.hovered = false;
+
+  fillStyle(style) {
+    this.style = {};
     
-    let mousePoint = new DOMPoint(nde.mouse.x, nde.mouse.y);
-    let transformedMousePoint = mousePoint.matrixTransform(renderer.getTransform().inverse());
-    if (
-      transformedMousePoint.x > this.pos.x && 
-      transformedMousePoint.x < this.pos.x + this.size.x + this.style.padding * 2 &&
-      transformedMousePoint.y > this.pos.y && 
-      transformedMousePoint.y < this.pos.y + this.size.y + this.style.padding * 2
-    ) {
-      this.hovered = true;
-      nde.hoveredUIElement = this;
+    if (!style) style = {};
+
+    let temp = nestedObjectAssign({}, defaultStyle, this.defaultStyle);
+
+    nestedObjectAssign(this.style, temp, style);
+
+    delete this.style.hover;
+    this.style.hover = nestedObjectAssign({}, this.style, style.hover);
+  }
+
+  calculateSize() {
+    let isRow = this.style.direction == "row";
+
+    this.size.set(0, 0);
+
+    for (let c of this.children) {
+      if (isRow) {
+        this.size.x += c.size.x;
+        this.size.y = Math.max(this.size.y, c.size.y);
+      } else {
+        this.size.x = Math.max(this.size.x, c.size.x);
+        this.size.y += c.size.y;
+      }
+    }
+    
+    this.size.add(this.style.padding * 2);
+
+    if (this.size.x < this.style.minSize.x) this.size.x = this.style.minSize.x;
+    if (this.size.y < this.style.minSize.y) this.size.y = this.style.minSize.y;
+
+    let gap = this.style.gap * Math.max(this.children.length - 1, 0);
+
+    if (isRow) this.size.x += gap;
+    else this.size.y += gap;
+  }
+
+  growChildren() {
+    let isRow = this.style.direction == "row";
+
+    for (let i = 0; i < 2; i++) {
+      let isHor = i == 0;
+
+      let remaining = isHor ? this.size.x : this.size.y;
+      let growable = [];
+
+      remaining -= this.style.padding * 2;
+
+      if (isHor == isRow) {
+        for (let c of this.children) {
+          if (isHor) {
+            remaining -= c.size.x;
+            if (c.style.growX) growable.push(c);
+          } else {
+            remaining -= c.size.y;
+            if (c.style.growY) growable.push(c);
+          }
+        }
+        if (growable.length == 0) continue;
+  
+        remaining -= this.style.gap * Math.max(this.children.length - 1, 0);
+
+        while (remaining > 0.0001) {
+          let smallestChild = growable[0];
+
+          let smallest = isHor ? smallestChild.size.x : smallestChild.size.y;
+          let secondSmallest = Infinity;
+          let widthToAdd = remaining;
+
+          for (let c of growable) {
+            let w = isHor ? c.size.x : c.size.y;
+
+            if (w < smallest) {
+              secondSmallest = smallest;
+              smallest = w;
+            }
+            if (w > smallest) {
+              secondSmallest = Math.min(secondSmallest, w);
+              widthToAdd = secondSmallest - smallest;
+            }
+          }
+
+          widthToAdd = Math.min(widthToAdd, remaining / growable.length);
+
+          for (let c of growable) {
+            let w = isHor ? c.size.x : c.size.y;
+
+            if (w == smallest) {
+              if (isHor) {
+                c.size.x += widthToAdd;
+              } else {
+                c.size.y += widthToAdd;
+              }
+              remaining -= widthToAdd;
+            }
+          }         
+
+        }
+        for (let c of this.children) {
+          if ((isHor && !c.style.growX) || (!isHor && !c.style.growY)) continue;
+  
+          if (isHor) {
+            c.size.x += remaining / growable.length;
+          } else {
+            c.size.y += remaining / growable.length;
+          } 
+        }
+
+
+      } else {
+        for (let c of this.children) {
+          if ((isHor && !c.style.growX) || (!isHor && !c.style.growY)) continue;
+  
+          if (isHor) {
+            c.size.x = remaining;
+          } else {
+            c.size.y = remaining;
+          }             
+        }
+      }
     }
 
-    if (this.forceHover) this.hovered = true;
+
+
+    for (let c of this.children) {
+      c.growChildren();
+    }
+  }
+
+  positionChildren() {
+    let isRow = this.style.direction == "row";
+
+
+    let remaining = isRow ? this.size.x : this.size.y;
+    remaining -= this.style.padding * 2;
+
+    for (let c of this.children) {
+      if (isRow) remaining -= c.size.x;
+      else remaining -= c.size.y;
+    }
+
+    remaining -= this.style.gap * Math.max(this.children.length - 1, 0);
+    remaining *= (isRow ? this.style.align.x : this.style.align.y) / 2;
+    
+    let along = this.style.padding + remaining;
+
+    for (let c of this.children) {
+      let remaining;
+
+      if (isRow) {
+        remaining = this.size.y - this.style.padding * 2 - c.size.y;
+        remaining *= this.style.align.y / 2;
+
+        c.pos.x = this.pos.x + along;
+        c.pos.y = this.pos.y + this.style.padding + remaining;
+
+        along += c.size.x + this.style.gap;
+      } else {
+        remaining = this.size.x - this.style.padding * 2 - c.size.x;
+        remaining *= this.style.align.x / 2;
+
+        c.pos.x = this.pos.x + this.style.padding + remaining;
+        c.pos.y = this.pos.y + along;
+
+        along += c.size.y + this.style.gap;
+      }
+
+      c.positionChildren();
+    }
   }
 
   render() {
     renderer.applyStyles(this.hovered ? this.style.hover : this.style);
-    
-    renderer.rect(this.pos, this.size._add(this.style.padding * 2));    
+
+    renderer.rect(this.pos, this.size);    
   }
 }
 
@@ -846,15 +1034,108 @@ function nestedObjectAssign(dest, target, source) {
 
 
 
-/* src/ui/buttonBase.js */
-class ButtonBase extends UIElementBase {
-  constructor(pos, size, events) {
-    super(pos, size, events);
+/* src/ui/UIRoot.js */
+class UIRoot extends UIBase {
+  constructor(props) {
+    super(props);
+
+    this.defaultStyle = {
+      direction: "column"
+    };
+
+    this.fillStyle(props.style);
+
+    if (props.pos) this.pos.from(props.pos);
+
+    this.initUI();
   }
 
-  render() {
-    super.checkHovered();
-    super.render();  
+  initUI() {
+    this.fitSizePass();
+    this.growSizePass();
+    this.positionPass();
+  }
+
+  renderUI() {
+    renderer.save();
+
+    this.hoverPass();
+    this.renderPass();
+
+    renderer.restore();
+  }
+
+
+
+
+
+  fitSizePass() {
+    this.fitSizePassHelper(this);
+  }
+  fitSizePassHelper(element) {
+    for (let c of element.children) {
+      this.fitSizePassHelper(c);
+    }
+
+    element.calculateSize();
+  }
+
+
+
+  growSizePass() {
+    this.growChildren();
+  }
+
+
+
+  positionPass() {
+    this.positionChildren();
+  }
+
+
+
+  hoverPass() {    
+    let mousePoint = new DOMPoint(nde.mouse.x, nde.mouse.y);
+    let transformedMousePoint = mousePoint.matrixTransform(renderer.getTransform().inverse());
+
+    this.hoverPassHelper(this, false, transformedMousePoint);
+  }
+  hoverPassHelper(element, found, pt) {
+    element.hovered = element.forceHover;
+    if (
+      !found &&
+      element.interactable && 
+      pt.x >= element.pos.x && 
+      pt.x <= element.pos.x + element.size.x && 
+      pt.y >= element.pos.y && 
+      pt.y <= element.pos.y + element.size.y) 
+    {
+      nde.hoveredUIElement = element;
+
+      found = true;
+    }
+
+    if (found) {
+      element.hovered = true;
+    }
+
+    if (element.forceHover) found = true;
+
+    for (let c of element.children) {
+      this.hoverPassHelper(c, found, pt);
+    }
+  }
+
+
+
+  renderPass() {
+    this.renderPassHelper(this);
+  }
+  renderPassHelper(element) {
+    element.render();
+    for (let c of element.children) {
+      this.renderPassHelper(c);
+    }
   }
 }
 
@@ -862,36 +1143,37 @@ class ButtonBase extends UIElementBase {
 
 
 
-/* src/ui/buttonText.js */
-class ButtonText extends ButtonBase {
-  constructor(pos, text, style, events) {
-    super(pos, new Vec(0, 0), events);
+/* src/ui/UIText.js */
+class UIText extends UIBase {
+  constructor(props) {
+    super(props);
+    this.children = [];
 
     this.defaultStyle.text = {
-      fill: "rgba(255, 255, 255, 1)",
-      stroke: "rgba(0, 0, 0, 1)",
+      fill: "rgb(255, 255, 255)",
+
       font: "16px monospace",
       textAlign: ["left", "top"],
     };
 
-    this.fillStyle(style);
+    this.fillStyle(props.style);
 
-    this.text = text;
+    this.text = props.text;    
   }
 
+  calculateSize() {
+    renderer.applyStyles(this.style.text);
+
+    this.size = renderer.measureText(this.text);    
+
+    if (this.size.x < this.style.minSize.x) this.size.x = this.style.minSize.x;
+    if (this.size.y < this.style.minSize.y) this.size.y = this.style.minSize.y;
+  }
 
   render() {
     renderer.applyStyles(this.hovered ? this.style.hover.text : this.style.text);
-    let size = renderer.measureText(this.text);
-    
-    this.size = new Vec(size.width, size.fontBoundingBoxAscent + size.fontBoundingBoxDescent );
-    
-    
-    super.render();
-    
-    renderer.applyStyles(this.hovered ? this.style.hover.text : this.style.text);
-    
-    renderer.text(this.text, this.pos._add(this.style.padding));
+
+    renderer.text(this.text, this.pos);
   }
 }
 
@@ -899,26 +1181,25 @@ class ButtonText extends ButtonBase {
 
 
 
-/* src/ui/buttonImage.js */
-class ButtonImage extends ButtonBase {
-  constructor(pos, size, img, style, events) {
-    super(pos, size, events);
+/* src/ui/UIImage.js */
+class UIImage extends UIBase {
+  constructor(props) {
+    super(props);
+    this.children = [];
 
     this.defaultStyle.image = {
       imageSmoothing: true,
     };
-    
-    this.fillStyle(style);
 
-    this.img = img;
+    this.fillStyle(props.style);  
+
+    this.image = props.image;
   }
 
   render() {
-    super.render();
-
     renderer.applyStyles(this.hovered ? this.style.hover.image : this.style.image);
-    
-    renderer.image(this.img, this.pos._add(this.style.padding), this.size);
+
+    renderer.image(this.image, this.pos, this.size);
   }
 }
 
@@ -926,40 +1207,142 @@ class ButtonImage extends ButtonBase {
 
 
 
-/* src/ui/settings/settingCollection.js */
-class SettingCollection extends UIElementBase {
-  constructor(pos, value, style, settingsTemplate, events) {
-    super(pos, new Vec(0, 0), events);
+/* src/ui/buttons/UIButton.js */
+class UIButton extends UIBase {
+  constructor(props) {
+    super(props);
 
-    this.value = value;
+    this.interactable = true;
+  }
+}
+
+
+
+
+
+/* src/ui/buttons/UIButtonText.js */
+class UIButtonText extends UIButton {
+  constructor(props) {
+    super(props);
+
+    this.children = [new UIText({
+      text: props.text,
+      style: props.textStyle,
+    })];
+  }
+}
+
+
+
+
+
+/* src/ui/buttons/UIButtonImage.js */
+class UIButtonImage extends UIButton {
+  constructor(props) {
+    super(props);
+
+    this.children = [new UIImage({
+      image: props.image,
+      style: props.imageStyle,
+    })];
+  }
+}
+
+
+
+
+
+/* src/ui/settings/UISettingBase.js */
+class UISettingBase extends UIBase {
+  constructor(props) {
+    super(props);
+    this.interactable = true;
+
+    this.value = props.value;
+
+    this.name = props.name;
+    this.displayName = props.displayName;
+  }
+
+  setValue(newValue) {
+    this.value = newValue;
+  }
+
+  fireInput() {
+    this.fireEvent("input", this.value);
+  }
+  fireChange() {
+    this.fireEvent("change", this.value);
+  }
+}
+
+
+
+
+
+/* src/ui/settings/UISettingCollection.js */
+class UISettingCollection extends UISettingBase {
+  constructor(props) {
+    super(props);
+    this.interactable = false;
 
     this.defaultStyle = {
-      hover: {}, //Irrelevant
+      direction: "column",
 
-      size: new Vec(500, 50),
-      gap: 10,
-      settingXOffset: 600,
-
-      text: {
-        font: "50px monospace",
-        textAlign: ["left", "top"],
-        fill: "rgba(255, 255, 255, 1)",
-      },
-
-      setting: {
-        padding: 0,
-      },
+      row: {growX: true, gap: 10},
+      label: {},
     };
-    this.fillStyle(style);
-    this.settingsTemplate = settingsTemplate;
+    this.fillStyle(props.style);  
 
-    
 
-    this.elements = {};
+
+    this.value = props.value || {};
+
+    for (let i = 0; i < this.children.length; i++) {
+      let c = this.children[i];
+
+      let rowChildren = [c];
+      
+      if (props.hasLabels && c.displayName) {
+        rowChildren.unshift(new UIBase({
+          style: {growX: true},
+        }));
+
+        rowChildren.unshift(new UIText({
+          text: c.displayName,
+
+          style: this.style.label,
+        }));
+      }
+
+      this.children[i] = new UISettingCollectionRow({
+        style: this.style.row,
+
+        children: rowChildren,
+      });
+
+      let name = c.name;
+      if (name && c.value != undefined) {
+        if (this.value[name] != undefined) c.setValue(this.value[name]);
+        else this.value[name] = c.value;
+  
+        c.registerEvent("input", value => {
+          this.value[name] = value;
+          this.fireEvent("input", this.value);
+        });
+        c.registerEvent("change", value => {
+          this.value[name] = value;
+          this.fireEvent("change", this.value);
+        });
+      }
+    }
+return
+
+
 
     let y = 0;
-    for (let i in settingsTemplate) {
-      let setting = settingsTemplate[i];   
+    for (let i in template) {
+      let setting = template[i];   
 
       let settingStyle = style;
       if (setting.style) {        
@@ -995,7 +1378,7 @@ class SettingCollection extends UIElementBase {
     for (let i in this.elements) {
       let elem = this.elements[i];      
       renderer.applyStyles(this.style.text);
-      renderer.text(this.settingsTemplate[i].name || i, new Vec(this.pos.x, elem.pos.y));
+      renderer.text(this.template[i].name || i, new Vec(this.pos.x, elem.pos.y));
 
       elem.render();
     }
@@ -1003,28 +1386,11 @@ class SettingCollection extends UIElementBase {
 }
 
 
-
-
-
-
-
-/* src/ui/settings/SettingBase.js */
-class SettingBase extends UIElementBase {
-  constructor(pos, size, events, value) {
-    super(pos, size, events);
-
-    this.value = value;
-  }
-
-  setValue(newValue) {
-    let old = this.value;
-    this.value = newValue;
-
-    if (old != this.value) this.fireEvent("input", this.value);
-  }
-
-  change() {
-    this.fireEvent("change", this.value);
+class UISettingCollectionRow extends UIBase {
+  render() {
+    if (this.children.length == 3) this.children[0].hovered = this.children[2].hovered;
+    
+    super.render();
   }
 }
 
@@ -1032,55 +1398,70 @@ class SettingBase extends UIElementBase {
 
 
 
-/* src/ui/settings/SettingCheckbox.js */
-class SettingCheckbox extends SettingBase {
-  constructor(pos, size, style, args, events) {
-    super(pos, size, events, args.default);
 
+/* src/ui/settings/UISettingCheckbox.js */
+class UISettingCheckbox extends UISettingBase {
+  constructor(props) {
+    super(props);
 
     this.defaultStyle.checkbox = {
-      fill: "rgba(255, 255, 255, 1)",
-      stroke: "rgba(255, 255, 255, 1)",
-    };
-    
-    this.fillStyle(style);
-    
-    this.setValue(args.default);
+      fill: "rgba(255, 255, 255, 0)",
 
-    this.funcA = e=>this.mouseup2(e);
-    this.registerEvent("mouseup", e=>{this.mouseup1(e)});
+      growX: true,
+      growY: true,
+        
+      checked: {
+        fill: "rgba(255, 255, 255, 1)",
+        stroke: "rgba(255, 255, 255, 1)",
+      },
+    };
+    this.fillStyle(props.style);
+
+
+    this.children = [new UIBase({
+      
+    })];
+    
+
+    this.funcA = e=>this.mouseupGlobal(e);
+    this.registerEvent("mouseup", e=>{this.mouseupLocal(e)});
     this.registerEvent("mousedown", e=>{
       this.forceHover = true;
 
       nde.registerEvent("mouseup", this.funcA);
     });
+
+    
+
+    this.setValue(props.value);
   }
 
-  mouseup1(e) {
+  setValue(newValue) {
+    super.setValue(newValue);
+
+    let style = this.style.checkbox;
+    if (this.value) style = {...style, ...this.style.checkbox.checked};
+
+    let hoverStyle = this.style.hover.checkbox;
+    if (this.value) hoverStyle = {...hoverStyle, ...this.style.hover.checkbox.checked};
+
+    style.hover = hoverStyle;
+    
+    this.children[0].fillStyle(style);
+  }
+
+  mouseupLocal(e) {
     if (!this.forceHover) return;
 
     this.setValue(!this.value);
-    this.change();
+    this.fireInput();
+    this.fireChange();
   }
 
-  mouseup2(e) {
+  mouseupGlobal(e) {
     this.forceHover = false;
 
     nde.unregisterEvent("mouseup", this.funcA);
-  }
-
-  render() {
-    super.checkHovered();
-    super.render();  
-    this.rendererTransform = renderer.getTransform();
-
-    this.renderContent();
-  }
-
-  renderContent() {
-    renderer.applyStyles(this.hovered ? this.style.hover.checkbox : this.style.checkbox);
-
-    if (this.value) renderer.rect(this.pos._add(this.style.padding), this.size);   
   }
 }
 
@@ -1088,37 +1469,79 @@ class SettingCheckbox extends SettingBase {
 
 
 
-/* src/ui/settings/SettingRange.js */
-class SettingRange extends SettingBase {
-  constructor(pos, size, style, args, events) {
-    super(pos, size, events, args.default);
+/* src/ui/settings/UISettingRange.js */
+class UISettingRange extends UISettingBase {
+  constructor(props) {
+    super(props);
 
-    this.defaultStyle.range = {
-      fill: "rgba(255, 255, 255, 1)",
-      stroke: "rgba(255, 255, 255, 1)",
+    this.defaultStyle = {
+      gap: 10,
 
-      text: {
-        margin: 10,
-        width: 50,
-        
-        font: "50px monospace",
-        textAlign: ["right", "middle"],
-        fill: "rgba(255, 255, 255, 1)",
+      slider: {
+        padding: 10,
+        minSize: new Vec(300, 50),
+
+        fill: "rgb(0, 0, 0)",
+        stroke: "rgb(0, 0, 0)",
+  
+        active: {
+          fill: "rgb(255, 255, 255)",
+          stroke: "rgb(255, 255, 255)",
+        },
       },
 
-      hover: {}
-    };
-    
-    this.fillStyle(style);
-    
-    this.rangeSizeTotal = new Vec(size.x - this.style.range.text.margin - this.style.range.text.width - this.style.padding, size.y);
-    
-    this.rangeSize = new Vec(size.y, size.y);
+      number: {
+        minSize: new Vec(80, 50),
+        align: new Vec(2, 1),
 
-    this.min = args.min;
-    this.max = args.max;
-    this.step = args.step || 1;
-    this.setValue(args.default);
+        fill: "rgb(0, 0, 0)",
+        stroke: "rgb(0, 0, 0)",
+        
+        text: {
+          fill: "rgb(255, 255, 255)",
+          font: "40px monospace",
+          textAlign: ["right", "middle"],
+        },
+      },
+    };
+    this.fillStyle(props.style);
+    this.style.padding = 0;
+
+
+    this.slider = new UIBase({
+      style: {...this.style.slider.active,
+        hover: this.style.hover.slider.active,
+      },
+    });
+    this.range = new UIBase({
+      style: {...this.style.slider,
+        hover: this.style.hover.slider,
+      },
+
+      children: [this.slider],
+    });
+    this.numberText = new UIText({
+      text: "",
+
+      style: {text: {...this.style.number.text,
+        hover: this.style.hover.number.text,
+      }},
+    });
+    this.number = new UIBase({
+      style: {...this.style.number,
+        hover: this.style.hover.number,
+      },
+
+      children: [this.numberText],
+    });
+
+    this.children = [this.range, this.number];
+
+    this.rangeSizeTotal = new Vec(0, 0);
+
+    this.min = props.min;
+    this.max = props.max;
+    this.step = props.step || 1;
 
     this.rendererTransform = undefined;
 
@@ -1133,6 +1556,18 @@ class SettingRange extends SettingBase {
       nde.registerEvent("mousemove", this.funcA);
       nde.registerEvent("mouseup", this.funcB);
     });
+    
+    this.setValue(props.value);
+  }
+
+  calculateSize() {
+    this.numberText.size.set(0, 0);
+
+    super.calculateSize();
+
+    this.rangeSizeTotal.from(this.range.size).sub(this.range.style.padding * 2);
+
+    this.sizeSlider();
   }
 
   mousemove(e) {
@@ -1140,7 +1575,9 @@ class SettingRange extends SettingBase {
     let transformedMousePoint = mousePoint.matrixTransform(this.rendererTransform.inverse());
     
     let progress = Math.min(Math.max((transformedMousePoint.x - this.pos.x - this.style.padding) / this.rangeSizeTotal.x, 0), 1);
+
     this.setValue(progress * (this.max - this.min) + this.min);
+    this.fireInput();
   }
 
   mouseup(e) {
@@ -1149,37 +1586,35 @@ class SettingRange extends SettingBase {
     nde.unregisterEvent("mousemove", this.funcA);
     nde.unregisterEvent("mouseup", this.funcB);
 
-    this.change();
+    this.fireChange();
   }
 
   setValue(newValue) {
     super.setValue(Math.round(newValue / this.step) * this.step);
 
-    this.rangeSize.x = (this.value - this.min) / (this.max - this.min) * this.rangeSizeTotal.x;
+    this.sizeSlider();
+    this.numberText.text = this.value;
+  }
+
+  sizeSlider() {
+    this.slider.size.x = (this.value - this.min) / (this.max - this.min) * this.rangeSizeTotal.x;
+    this.slider.size.y = this.rangeSizeTotal.y;
   }
 
   render() {
-    super.checkHovered();
+    //super.render();
 
     this.rendererTransform = renderer.getTransform();
-
-    renderer.applyStyles(this.hovered ? this.style.hover : this.style);
-    renderer.rect(this.pos, this.rangeSizeTotal._add(this.style.padding * 2));
-    
-    let numberPos = new Vec(this.pos.x + this.rangeSizeTotal.x + this.style.padding * 2 + this.style.range.text.margin, this.pos.y);
-    renderer.rect(numberPos, new Vec(this.style.range.text.width, this.size.y).add(this.style.padding * 2));
-
-    this.renderContent();
-
-    renderer.applyStyles(this.hovered ? this.style.hover.range.text : this.style.range.text);
-    renderer.text(this.value, numberPos._addV(new Vec(this.style.padding + this.style.range.text.width, this.size.y / 2 + this.style.padding)));
   }
+}
 
-  renderContent() {
-    renderer.applyStyles(this.hovered ? this.style.hover.range : this.style.range);
 
-    if (this.value > this.min) renderer.rect(this.pos._add(this.style.padding), this.rangeSize);   
-  }
+
+
+
+/* src/ui/settings/UISettingRGB.js */
+class UISettingRGB extends UISettingCollection {
+  
 }
 
 

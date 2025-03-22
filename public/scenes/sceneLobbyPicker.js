@@ -9,22 +9,65 @@ class SceneLobbyPicker extends Scene {
 
   start() {
     let buttonStyle = {
-      padding: 10, 
+      padding: 10,
 
-      text: {font: "50px monospace", fill: 255}, 
-      hover: {text: {fill: [255, 0, 0]}}
+      fill: "rgb(0, 0, 0)",
+
+      text: {font: "50px monospace"},
+
+      hover: {
+        text: {fill: "rgb(255, 0, 0)"}
+      }
     };
-    this.buttons = [
-      new ButtonText(new Vec(50, 50), "Customize Character", buttonStyle, {mousedown: [() => {
-        nde.transition = new TransitionSlide(scenes.character, new TimerTime(0.2));
-      }]}),
-      new ButtonText(new Vec(50, 250), "Create Lobby", buttonStyle, {mousedown: [function () {
-        nde.transition = new TransitionSlide(scenes.lobbyCreator, new TimerTime(0.2));
-      }]}),
-      new ButtonText(new Vec(50, 350), "Join Lobby", buttonStyle, {mousedown: [function () {
-        gotoLobbyFinder();
-      }]}),
-    ];
+    this.ui = new UIRoot({
+      pos: new Vec(50, 50),
+
+
+      style: {
+        direction: "column",
+
+        gap: 10,
+      },
+
+      children: [
+        new UIButtonText({
+          style: {...buttonStyle},
+          textStyle: {...buttonStyle},
+          text: "Customize Character",
+
+          events: {mousedown: [() => {
+            nde.transition = new TransitionSlide(scenes.character, new TimerTime(0.2));
+          }]},
+        }),
+
+
+        new UIBase({
+          style: {
+            minSize: new Vec(50, 50),
+          },
+        }),
+
+
+        new UIButtonText({
+          style: {...buttonStyle},
+          textStyle: {...buttonStyle},
+          text: "Create Lobby",
+
+          events: {mousedown: [() => {
+            nde.transition = new TransitionSlide(scenes.lobbyCreator, new TimerTime(0.2));
+          }]},
+        }),
+        new UIButtonText({
+          style: {...buttonStyle},
+          textStyle: {...buttonStyle},
+          text: "Join Lobby",
+
+          events: {mousedown: [() => {
+            gotoLobbyFinder();
+          }]},
+        }),
+      ],
+    });    
   }
 
   update(dt) {
@@ -48,7 +91,7 @@ class SceneLobbyPicker extends Scene {
     cam.applyTransform();
     renderer.set("lineWidth", cam.unScaleVec(new Vec(1)).x);
 
-    this.buttons.forEach(e => e.render());
+    this.ui.renderUI();
 
     renderer.restore();
   }

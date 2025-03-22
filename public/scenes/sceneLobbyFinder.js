@@ -11,47 +11,125 @@ class SceneLobbyFinder extends Scene {
 
   start() {
     let buttonStyle = {
-      padding: 10, 
+      padding: 10,
 
-      text: {font: "50px monospace", fill: 255}, 
-      hover: {text: {fill: [255, 0, 0]}}
+      fill: "rgb(0, 0, 0)",
+
+      text: {font: "50px monospace"},
+
+      hover: {
+        text: {fill: "rgb(255, 0, 0)"}
+      }
     };
-    this.buttons = [
-      new ButtonText(new Vec(50, 50), "Back", buttonStyle, {mousedown: [function () {
-        nde.transition = new TransitionSlide(scenes.lobbyPicker, new TimerTime(0.2));
-      }]}),
 
-      new ButtonText(new Vec(50, 150), "Manual", buttonStyle, {mousedown: [function () {
-        let lobbyCode = prompt("Lobby code");
-
-        if (lobbyCode == "" || lobbyCode == null) return;
-
-        document.location.href = lobbyCode;
-      }]}),
-
-      new ButtonText(new Vec(50, 250), "Refresh", buttonStyle, {mousedown: [function () {
-        gotoLobbyFinder();
-      }]}),
-    ];
-
-    let buttonStyle2 = {
-      padding: 10, 
-
-      text: {font: "20px monospace", fill: 255}, 
-      hover: {text: {fill: [255, 0, 0]}}
-    };
-    let y = 350;    
+    let lobbies = new UIBase({
+      style: {
+        direction: "column",
+        gap: 10,
+        
+        growY: true,
+      },
+    });
     for (let lobby of this.lobbies) {
-      let text = `${rpad(lobby.lobbyId, " ", 6)}: ${lobby.playerCount}/${lobby.maxPlayers}`;
+      let textStyle = {
+        text: {font: "20px monospace"},
+        hover: {
+          text: {fill: "rgb(255, 0, 0)"},
+        },
+      };
 
-      let button = new ButtonText(new Vec(50, y), text, buttonStyle2, {mousedown: [function () {
-        document.location.href = lobby.lobbyId;
-      }]});
+      let element = new UIButton({
+        style: {...buttonStyle,
 
-      this.buttons.push(button);
+          padding: 10,
+          gap: 10,
+          growX: true,
+          minSize: new Vec(200, 0),
+        },
 
-      y+=50;
+        children: [
+          new UIText({
+            text: lobby.lobbyId + ": ",
+
+            style: textStyle,
+          }),
+          new UIBase({
+            style: {growX: true},
+          }),
+          new UIText({
+            text: lobby.playerCount + "/" + lobby.maxPlayers,
+
+            style: textStyle,
+          }),
+        ],
+
+        events: {mousedown: [function () {
+          document.location.href = lobby.lobbyId;
+        }]},
+      });
+
+      lobbies.children.push(element);
     }   
+
+
+    this.ui = new UIRoot({
+      pos: new Vec(50, 50),
+
+
+      style: {
+        direction: "column",
+
+        gap: 10,
+      },
+
+      children: [
+        new UIButtonText({
+          style: {...buttonStyle},
+          textStyle: {...buttonStyle},
+          text: "Back",
+
+          events: {mousedown: [() => {
+            nde.transition = new TransitionSlide(scenes.lobbyPicker, new TimerTime(0.2));
+          }]},
+        }),
+
+
+        new UIBase({
+          style: {
+            minSize: new Vec(50, 50),
+          },
+        }),
+
+
+        new UIButtonText({
+          style: {...buttonStyle},
+          textStyle: {...buttonStyle},
+          text: "Manual",
+
+          events: {mousedown: [() => {
+            let lobbyCode = prompt("Lobby code");
+    
+            if (lobbyCode == "" || lobbyCode == null) return;
+    
+            document.location.href = lobbyCode;
+          }]},
+        }),
+
+
+        new UIButtonText({
+          style: {...buttonStyle},
+          textStyle: {...buttonStyle},
+          text: "Refresh",
+
+          events: {mousedown: [() => {
+            gotoLobbyFinder();
+          }]},
+        }),
+
+        
+        lobbies,
+      ],
+    });    
   }
 
   update(dt) {
@@ -75,7 +153,7 @@ class SceneLobbyFinder extends Scene {
     cam.applyTransform();
     renderer.set("lineWidth", cam.unScaleVec(new Vec(1)).x);
 
-    this.buttons.forEach(e => e.render());
+    this.ui.renderUI();
 
     renderer.restore();
   }

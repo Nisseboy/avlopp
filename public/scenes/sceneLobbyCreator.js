@@ -11,61 +11,103 @@ class SceneLobbyCreator extends Scene {
 
   start() {
     let buttonStyle = {
-      padding: 10, 
+      minSize: new Vec(50, 50),
 
-      text: {font: "50px monospace", fill: 255}, 
-      hover: {text: {fill: [255, 0, 0]}}
+      padding: 10,
+
+      fill: "rgb(0, 0, 0)",
+
+      text: {font: "50px monospace"},
+
+      hover: {
+        text: {fill: "rgb(255, 0, 0)"},
+
+        checkbox: {checked: {
+          fill: "rgb(255, 0, 0)",
+          stroke: "rgb(255, 0, 0)",
+        }},
+
+        slider: { active: {
+          fill: "rgb(255, 0, 0)",
+          stroke: "rgb(255, 0, 0)",
+        }},
+      },
     };
-    let settingCollectionStyle = {
-      size: new Vec(500, 50),
-      gap: 10,
-      settingXOffset: 600,
 
-      text: {
-        font: "50px monospace",
+    this.ui = new UIRoot({
+      pos: new Vec(50, 50),
+
+
+      style: {
+        direction: "column",
+
+        gap: 10,
       },
 
-      setting: {
-        padding: 10,
+      children: [
+        new UIButtonText({
+          text: "Back",
 
-        range: {
-          text: {
-            width: 30,
+          style: {...buttonStyle},
+          textStyle: {...buttonStyle},
+
+          events: {mousedown: [() => {
+            nde.transition = new TransitionSlide(scenes.lobbyPicker, new TimerTime(0.2));
+          }]},
+        }),
+
+        new UISettingCollection({
+          value: this.lobbySettings,
+          hasLabels: true,
+
+          style: {
+            gap: 10,
+
+            row: {
+              gap: 10,
+            },
+            label: {...buttonStyle,
+            },
           },
-        },
+
+          children: [
+            new UIButtonText({
+              text: "Create Lobby",
+
+              style: {...buttonStyle},
+              textStyle: {...buttonStyle},
+
+              events: {mousedown: [() => {
+                socket.emit("create lobby", this.lobbySettings);
+                nde.setScene(scenes.loading);
         
-        hover: { 
-          stroke: "rgba(255, 0, 0, 1)", 
-          checkbox: {
-            stroke: "rgba(255, 0, 0, 1)", 
-            fill: "rgba(255, 0, 0, 1)"
-          },
-          range: {
-            fill: "rgba(255, 0, 0, 1)", 
-            stroke: "rgba(255, 0, 0, 1)",
-          },
-        },
-      }
-    };
-    this.buttons = [
-      new ButtonText(new Vec(50, 50), "Back", buttonStyle, {mousedown: [function () {
-        nde.transition = new TransitionSlide(scenes.lobbyPicker, new TimerTime(0.2));
-      }]}),
+                socket.on("create lobby", data => { 
+                  document.location.href = data.lobbyId;
+                });
+              }]},
+            }),
 
-      new ButtonText(new Vec(50, 150), "Create Lobby", buttonStyle, {mousedown: [() => {
-        socket.emit("create lobby", this.lobbySettings);
-        nde.setScene(scenes.loading);
+            new UISettingCheckbox({
+              name: "public", displayName: "Public",
+              value: false,
 
-        socket.on("create lobby", data => { 
-          document.location.href = data.lobbyId;
-        });
-      }]}),
+              style: {...buttonStyle,
+              }
+            }),
+            
+            new UISettingRange({
+              name: "maxPlayers", displayName: "Max Players",
+              value: 8,
+              min: 1, max: 8, step: 1,
 
-      new SettingCollection(new Vec(50, 250), this.lobbySettings, settingCollectionStyle, {
-        public:           {type: SettingCheckbox,  name: "Public",              args: {default: false}, style: {size: new Vec(50, 50)}},
-        maxPlayers:        {type: SettingRange,    name: "Max Players",         args: {default: 8, min: 1, max: 8}},
-      }, {}),
-    ];
+              style: {...buttonStyle,
+
+              }
+            }),
+          ],
+        }),
+      ],
+    });    
   }
 
   update(dt) {
@@ -89,7 +131,7 @@ class SceneLobbyCreator extends Scene {
     cam.applyTransform();
     renderer.set("lineWidth", cam.unScaleVec(new Vec(1)).x);
 
-    this.buttons.forEach(e => e.render());
+    this.ui.renderUI();
 
     renderer.restore();
   }
