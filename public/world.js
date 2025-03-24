@@ -337,6 +337,14 @@ class World {
       }
 
       let endBlock = materials[this.grid[newPosx + newPosy * this.size.x]];
+      if (endBlock == undefined) {
+        return {
+          length: Math.sqrt(sqd),
+          hitPos: new Vec(posx, posy),
+          blockPos: new Vec(newPosx, newPosy),
+          hit: false,
+        };
+      }
       if ((endBlock.opaque && !ignoreOpaque) || (endBlock.solid && !ignoreSolid)) {
         return {
           length: Math.sqrt(sqd),

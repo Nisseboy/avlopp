@@ -160,12 +160,19 @@ async function start() {
       let world = lobby.world;
   
       for (let data of dataAll.events) {
-        
+        let entity = undefined;
+        if (data.entityId) {
+          entity = world.entities.find(e => e.id == data.entityId);
+        }
       
         switch(data.action) {
           case "move":
-            player.pos = data.pos;
+            entity.pos = data.pos;
             break;
+          case "rot":
+            entity.dir = data.dir;
+            break;
+
           case "update slots":
             player.slots = data.slots;
             player.slot = data.slot;
@@ -179,10 +186,10 @@ async function start() {
   
   
           case "vec":
-            world.entities.find(e => e.id == data.entityId)[data.path] = data.vec;
+            entity[data.path] = data.vec;
             break;
           case "primitive":
-            world.entities.find(e => e.id == data.entityId)[data.path] = data.primitive;
+            entity[data.path] = data.primitive;
             break;
           case "remove entity":
             let index = world.entities.findIndex(e=>e.id==data.entityId);

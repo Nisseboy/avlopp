@@ -1,3 +1,6 @@
+let lastUpdate = 0;
+let lastUpdateTime = constants.updateInterval;
+
 class SceneGame extends Scene {
   constructor() {
     super();
@@ -43,6 +46,11 @@ class SceneGame extends Scene {
 
     socket.on("update", data => {
       for (let e of data.events) {
+        let entity = undefined;
+        if (e.entityId) {
+          entity = idLookup[e.entityId];
+        }
+
         switch (e.action) {
           case "connect":
             let newPlayer = cloneEntity(e.player, EntityPlayerOther);
@@ -55,14 +63,19 @@ class SceneGame extends Scene {
             break;
 
 
-          case "move":
-            let entity = idLookup[e.id];
-            
-            entity.newPos.from(e.pos);
-            entity.diffPos = entity.newPos._subV(entity.pos);
-            entity.moveTime = 0;
+          case "move":            
+            entity.lerpNewPos.from(e.pos);
+            entity.lerpDiffPos.from(entity.lerpNewPos).subV(entity.pos);
+            entity.lerpMoveTime = 0;
             
             break;
+          case "rot":            
+            entity.lerpNewDir = e.dir;
+            entity.lerpDiffDir = entity.lerpNewDir - entity.dir;
+            entity.lerpMoveTime = 0;
+            
+            break;
+
           case "update slots":
             idLookup[e.id].slots = e.slots;
             idLookup[e.id].slot = e.slot;
@@ -76,16 +89,20 @@ class SceneGame extends Scene {
 
             
           case "vec":
-            idLookup[e.entityId][e.path].from(e.vec);
+            entity[e.path].from(e.vec);
             break;
           case "primitive":
-            idLookup[e.entityId][e.path] = e.primitive;
+            entity[e.path] = e.primitive;
             break;
           case "remove entity":
             this.removeEntity(e.entityId);      
             break;
         }        
       }
+
+      let time = performance.now();
+      lastUpdateTime = Math.min(time - lastUpdate, constants.updateInterval * 2);
+      lastUpdate = time;
     });
 
     setInterval(() => {
@@ -167,7 +184,7 @@ class SceneGame extends Scene {
       emitEvent({action: "update slots", slots: player.slots, slot: player.slot});
 
       let entity = idLookup[heldItem];
-      emitEvent({action: "vec", entityId: entity.id, path: "pos", vec: entity.pos});
+      emitEvent({action: "move", entityId: entity.id, pos: entity.pos});
       
     }
     
@@ -236,7 +253,7 @@ class SceneGame extends Scene {
       let item = idLookup[heldItem];
       let dir = Math.atan2(nde.mouse.y- nde.w / 16 * 9 / 2, nde.mouse.x - nde.w / 2);
       if (item.dir != dir) {
-        emitEvent({action: "primitive", entityId: item.id, path: "dir", primitive: item.dir});
+        emitEvent({action: "rot", entityId: item.id, dir: item.dir});
         item.dir = dir;
       }
     }
@@ -279,15 +296,16 @@ class SceneGame extends Scene {
     }
 
 
+    nde.debugStats.lastUpdateTime = lastUpdateTime;
     nde.debugStats.pos = this.cam.pos._floor().toString();
   }
 
   render() {
 
     let cam = this.cam;
+    cam.renderW = nde.w;
 
     //Resize visibility mask and lighting texture if needed
-    cam.renderW = nde.w;
     if (this.visibilityMaskTexture.size.x != renderer.img.size.x) this.visibilityMaskTexture.resize(renderer.img.size);
     if (this.lightingTexture.size.x != renderer.img.size.x) this.lightingTexture.resize(renderer.img.size);
 

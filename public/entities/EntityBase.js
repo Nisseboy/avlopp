@@ -3,7 +3,6 @@ class EntityBase {
     this.pos = pos;
     this.dir = 0;
     this.speedMult = 1;
-
     
     this.type = type;
 
@@ -15,9 +14,16 @@ class EntityBase {
     this.slots = [];
     this.slot = 0;
 
-
     this.id = generateID();
     this.displayName = undefined;
+
+    //For interpolating movement
+    this.lerpDiffPos = new Vec(0, 0);
+    this.lerpNewPos = new Vec(0, 0);
+    if (this.pos) this.lerpNewPos.from(this.pos);
+    this.lerpDiffDir = 0;
+    this.lerpNewDir = this.dir;
+    this.lerpMoveTime = 1;
   }
 
   move(movement, dt) {
@@ -49,6 +55,22 @@ class EntityBase {
     if (pos.x < 0 || pos.y < 0 || pos.x >= world.size.x || pos.y >= world.size.y) return true;
 
     return materials[world.grid[pos.x + pos.y * world.size.x]].solid;
+  }
+
+  lerpData(dt) {
+    if (this.lerpMoveTime < 1 && this.lerpMoveTime >= 0) {
+      this.lerpMoveTime += dt / lastUpdateTime * 1000;
+      if (this.lerpNewPos.x != 0) this.pos.from(this.lerpNewPos).subV(this.lerpDiffPos._mul(1-this.lerpMoveTime));
+      if (this.lerpNewDir != 0) this.dir = this.lerpNewDir - this.lerpDiffDir * (1-this.lerpMoveTime);
+    } if (this.lerpMoveTime >= 1) {
+      if (this.lerpNewPos.x != 0) this.pos.from(this.lerpNewPos);
+      if (this.lerpNewDir != 0) this.dir = this.lerpNewDir;
+      this.lerpMoveTime = -1;
+
+      this.lerpNewPos.set(0, 0);
+      this.lerpNewDir = 0;
+      
+    }
   }
 
   serverUpdate(dt) {

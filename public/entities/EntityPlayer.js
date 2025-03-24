@@ -35,8 +35,8 @@ class EntityPlayer extends EntityBase {
     let moved = super.move(movement, dt);
 
     if (moved) {
-      emitEvent({action: "move", pos: this.pos});
-      emitEvent({action: "primitive", entityId: this.id, path: "dir", primitive: this.dir});
+      emitEvent({action: "move", entityId: this.id, pos: this.pos});
+      emitEvent({action: "rot", entityId: this.id, dir: this.dir});
     }
   }
 
@@ -101,23 +101,13 @@ class EntityPlayer extends EntityBase {
 class EntityPlayerOther extends EntityPlayer {
   constructor(pos, type) {
     super(pos, type);
-
-    this.diffPos = undefined;
-    this.newPos = new Vec().from(pos);
-    this.moveTime = 1;
   }
 
   serverUpdate(dt) {
     
   }
   clientUpdate(dt) {
-    if (this.moveTime < 1 && this.moveTime >= 0) {
-      this.moveTime += dt / constants.updateInterval * 1000;
-      this.pos = this.newPos._subV(this.diffPos._mul(1-this.moveTime));
-    } if (this.moveTime >= 1) {
-      this.pos.from(this.newPos);
-      this.moveTime = -1;
-    }    
+    this.lerpData(dt);
 
     this.updateFeet(dt);
   }

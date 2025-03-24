@@ -20,7 +20,10 @@ class EntityItem extends EntityBase {
     return this;
   }
 
-  serverUpdate(dt, world) {}
+  clientUpdate(dt) {
+    this.lerpData(dt);
+  }
+  serverUpdate(dt) {}
 
   use() {}
 

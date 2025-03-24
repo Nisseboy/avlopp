@@ -76,6 +76,7 @@ class SceneLobbyPicker extends Scene {
 
   render() {
     let cam = this.cam;
+    cam.renderW = nde.w;
 
     renderer.save();
 

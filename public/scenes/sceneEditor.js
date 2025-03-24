@@ -163,6 +163,7 @@ class SceneEditor extends Scene {
     renderer.rect(vecZero, new Vec(nde.w, nde.w / 16 * 9));
     
     let cam = this.cam;
+    cam.renderW = nde.w;
     let room = this.room;
 
     let paintOpen = nde.getKeyPressed("Paint Modifier");
